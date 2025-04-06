@@ -16,13 +16,22 @@ class AOF_API AAPlayerCharacter : public ACharacter, public IToPlayerInterface, 
 
 public:
 	AAPlayerCharacter();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_Interact(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
 
 protected:
 	virtual void BeginPlay() override;
+
+	void AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
+	
 	virtual void SetNickname_Implementation(const FString& Nickname) override;
-	virtual void SetVisibilityButtonInteract_Implementation(UWidgetComponent* WidgetComponent,
-	                                                        bool bVisibility) override;
+	virtual void SetVisibilityButtonInteract_Implementation(UWidgetComponent* WidgetComponent, bool bVisibility) override;
 	virtual void HandleInteract_Implementation() override;
+	virtual void PickUpItem_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp) override;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_Interact(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
 
 	UPROPERTY(BlueprintReadWrite, Category = "Player")
 	APlayerController* BP_PlayerController;

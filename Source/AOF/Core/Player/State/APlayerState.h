@@ -19,4 +19,7 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_SendMyNicknameToClient(const FString& Nickname);
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SendMyNicknameToClient(const FString& Nickname);
 };

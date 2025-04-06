@@ -3,12 +3,15 @@
 
 #include "WeaponBase.h"
 
+#include "AOF/Core/Player/Interfaces/ToPlayer/ToPlayerInterface.h"
 #include "Engine/AssetManager.h"
 #include "Structures/WeaponStructure.h"
 
 AWeaponBase::AWeaponBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	bReplicates = true;
+	SetReplicates(true);
 }
 
 
@@ -18,7 +21,6 @@ void AWeaponBase::OnConstruction(const FTransform& Transform)
 
 	
 	if (DataTableWeapon.IsNull()) return;
-
 	if (const auto WeaponDataRow = DataTableWeapon.GetRow<FWeaponStruct>(""))
 	{
 		WeaponData.Damage = WeaponDataRow->Damage;
@@ -106,5 +108,5 @@ void AWeaponBase::BeginPlay()
 
 void AWeaponBase::InteractItem_Implementation(AActor* CharacterInteract)
 {
-	
+	IToPlayerInterface::Execute_PickUpItem(CharacterInteract, this,ItemData);
 }

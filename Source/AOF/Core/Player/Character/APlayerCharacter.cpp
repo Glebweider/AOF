@@ -3,6 +3,7 @@
 
 #include "APlayerCharacter.h"
 
+#include "AOF/Core/Inventory/Component/Inventory/InventoryComponent.h"
 #include "AOF/Core/Inventory/Interface/ToItemInterface.h"
 #include "AOF/UI/Interface/ToUIInterface.h"
 #include "Camera/CameraComponent.h"
@@ -75,3 +76,35 @@ void AAPlayerCharacter::HandleInteract_Implementation()
 
 	}
 }
+
+//////////// PICK UP
+
+void AAPlayerCharacter::PickUpItem_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
+{
+	Server_Interact(ItemPickUp, InventoryItemPickUp);
+}
+
+void AAPlayerCharacter::Server_Interact_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
+{
+	AddItemToInventory(ItemPickUp, InventoryItemPickUp);
+	Multicast_Interact(ItemPickUp, InventoryItemPickUp);
+}
+
+void AAPlayerCharacter::Multicast_Interact_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
+{
+	if (ItemPickUp)
+	{
+		ItemPickUp->Destroy();
+	}
+}
+
+void AAPlayerCharacter::AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
+{
+	UInventoryComponent* InventoryComponent = FindComponentByClass<UInventoryComponent>();
+	if (InventoryComponent && InventoryComponent->AddItem(InventoryItemPickUp) && ItemPickUp)
+	{
+		ItemPickUp->Destroy();
+	}
+}
+
+////////////

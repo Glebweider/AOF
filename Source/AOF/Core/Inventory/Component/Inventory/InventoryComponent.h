@@ -21,9 +21,13 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	TArray<FInventoryItem> InventoryItems;
-	
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	int32 MaxSlots;
+
+public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void AddItem(TSubclassOf<AActor> ItemClass, int32 Quantity = 1);
+	bool AddItem(FInventoryItem Item);
 	
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool RemoveItem(FName ItemID, int32 Quantity = 1);

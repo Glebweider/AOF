@@ -38,4 +38,5 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	AController* Controller;
+	
 };

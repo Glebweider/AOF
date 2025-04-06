@@ -18,13 +18,17 @@ void AAPlayerState::BeginPlay()
 	}
 }
 
-void AAPlayerState::Server_SendMyNicknameToClient_Implementation(const FString& Nickname)
+void AAPlayerState::Multicast_SendMyNicknameToClient_Implementation(const FString& Nickname)
 {
-	if (Nickname.IsEmpty()) return;
-
 	APawn* PlayerPawn = GetPawn();
 	if (PlayerPawn && PlayerPawn->Implements<UToPlayerInterface>())
 	{
 		IToPlayerInterface::Execute_SetNickname(PlayerPawn, Nickname);
-	}
+	}	
+}
+
+void AAPlayerState::Server_SendMyNicknameToClient_Implementation(const FString& Nickname)
+{
+	if (Nickname.IsEmpty()) return;
+	Multicast_SendMyNicknameToClient(Nickname);
 }

@@ -16,8 +16,16 @@ void UInventoryComponent::BeginPlay()
 	
 }
 
-void UInventoryComponent::AddItem(TSubclassOf<AActor> ItemClass, int32 Quantity)
+bool UInventoryComponent::AddItem(const FInventoryItem Item)
 {
+	if (InventoryItems.Num() <= MaxSlots)
+	{
+		InventoryItems.Add(Item);
+		return true;		
+	} else
+	{
+		return false;
+	}
 }
 
 bool UInventoryComponent::RemoveItem(FName ItemID, int32 Quantity)

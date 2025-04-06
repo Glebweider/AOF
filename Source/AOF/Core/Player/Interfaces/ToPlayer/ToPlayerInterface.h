@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AOF/Core/Inventory/Structures/ItemStructure.h"
 #include "Components/WidgetComponent.h"
 #include "UObject/Interface.h"
 #include "ToPlayerInterface.generated.h"
@@ -26,4 +27,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
 	void SetVisibilityButtonInteract(UWidgetComponent* WidgetComponent, const bool bVisibility);
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
+	void PickUpItem(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
 };
