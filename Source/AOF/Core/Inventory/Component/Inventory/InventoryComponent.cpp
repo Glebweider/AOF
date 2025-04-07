@@ -7,6 +7,7 @@
 UInventoryComponent::UInventoryComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+	MaxSlots = 28;
 }
 
 

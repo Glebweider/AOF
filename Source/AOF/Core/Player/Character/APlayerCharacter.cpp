@@ -86,8 +86,10 @@ void AAPlayerCharacter::PickUpItem_Implementation(AActor* ItemPickUp, FInventory
 
 void AAPlayerCharacter::Server_Interact_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
 {
-	AddItemToInventory(ItemPickUp, InventoryItemPickUp);
-	Multicast_Interact(ItemPickUp, InventoryItemPickUp);
+	if (AddItemToInventory(ItemPickUp, InventoryItemPickUp))
+	{
+		Multicast_Interact(ItemPickUp, InventoryItemPickUp);
+	}
 }
 
 void AAPlayerCharacter::Multicast_Interact_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
@@ -98,12 +100,16 @@ void AAPlayerCharacter::Multicast_Interact_Implementation(AActor* ItemPickUp, FI
 	}
 }
 
-void AAPlayerCharacter::AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
+bool AAPlayerCharacter::AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
 {
 	UInventoryComponent* InventoryComponent = FindComponentByClass<UInventoryComponent>();
-	if (InventoryComponent && InventoryComponent->AddItem(InventoryItemPickUp) && ItemPickUp)
+	if (InventoryComponent && ItemPickUp && InventoryComponent->AddItem(InventoryItemPickUp))
 	{
 		ItemPickUp->Destroy();
+		return true;
+	} else
+	{
+		return false;
 	}
 }
 

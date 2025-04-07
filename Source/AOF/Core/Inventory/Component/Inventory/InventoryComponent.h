@@ -22,7 +22,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	TArray<FInventoryItem> InventoryItems;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
 	int32 MaxSlots;
 
 public:
