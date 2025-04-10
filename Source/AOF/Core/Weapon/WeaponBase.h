@@ -16,11 +16,43 @@ class AOF_API AWeaponBase : public AItemBase, public IToItemInterface
 
 public:
 	AWeaponBase();
+	
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
+	
 	virtual void InteractItem_Implementation(AActor* CharacterInteract) override;
+	virtual void UseItem_Implementation() override;
+	virtual void StopUseItem_Implementation() override;
+	
+	virtual void AutoFire();
+	virtual void BurstFire();
+	virtual void SpawnProjectile(FVector& StartDirection, FVector& EndDirection);
+
+	virtual void AutoReload();
+	
+	virtual bool CanFire();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_Fire();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_Fire();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_Fire_Recoil();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_Spawn_Hit();
 
 protected:
+	FTimerHandle FireTimerHandle;
+
+	int32 CurrentBulletsInBurst;
+	int32 CurrentAmmo;
+
+	bool bIsFire = false;
+	bool bIsShooting = false;
+	
 	UPROPERTY()
 	USkeletalMeshComponent* SkeletalMeshComponent;
 
@@ -29,9 +61,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WeaponData")
 	FWeaponData WeaponData;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WeaponData")
-	int32 CurrentAmmo;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	AActor* Character;

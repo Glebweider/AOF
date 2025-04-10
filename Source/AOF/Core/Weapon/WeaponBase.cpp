@@ -3,15 +3,16 @@
 
 #include "WeaponBase.h"
 
+#include "AOF/Core/Functions/BPF_Functions.h"
 #include "AOF/Core/Player/Interfaces/ToPlayer/ToPlayerInterface.h"
 #include "Engine/AssetManager.h"
+#include "Interface/Damage/DamageInterface.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Structures/WeaponStructure.h"
 
 AWeaponBase::AWeaponBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
-	bReplicates = true;
-	SetReplicates(true);
 }
 
 
@@ -35,8 +36,7 @@ void AWeaponBase::OnConstruction(const FTransform& Transform)
 		
 		WeaponData.FireType = WeaponDataRow->FireType;
 		WeaponData.AmmoType = WeaponDataRow->AmmoType;
-
-		WeaponData.HandSocket = WeaponDataRow->HandSocket;
+		
 		WeaponData.Name = WeaponDataRow->Name;
 		
 		WeaponData.WeaponMesh = WeaponDataRow->WeaponMesh;
@@ -109,4 +109,174 @@ void AWeaponBase::BeginPlay()
 void AWeaponBase::InteractItem_Implementation(AActor* CharacterInteract)
 {
 	IToPlayerInterface::Execute_PickUpItem(CharacterInteract, this,ItemData);
+}
+
+void AWeaponBase::UseItem_Implementation()
+{
+	bIsFire = true;
+	UE_LOG(LogTemp, Warning, TEXT("LOOOOOOOOG"));
+
+	if (!CanFire()) return;
+	switch (WeaponData.FireType)
+	{
+		case EFireType::Auto:
+			AutoFire();
+			break;
+
+		case EFireType::Burst:
+			BurstFire();
+			break;
+
+		case EFireType::Single:
+			Server_Fire();
+			AutoReload();
+			break;
+	}
+}
+
+void AWeaponBase::StopUseItem_Implementation()
+{
+	bIsFire	= false;
+	GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
+}
+
+void AWeaponBase::AutoFire()
+{
+	if (!bIsFire || !CanFire()) return;
+
+	UE_LOG(LogTemp, Warning, TEXT("AutoFire"));
+	Server_Fire();
+	if (CanFire())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AutoFire 1"));
+		GetWorld()->GetTimerManager().SetTimer(
+			FireTimerHandle,
+			this,
+			&AWeaponBase::AutoFire,
+			WeaponData.FireSpeed,
+			false
+		);
+	}
+	else
+	{
+		AutoReload();
+	}
+}
+
+void AWeaponBase::BurstFire()
+{
+	if (!CanFire()) return;
+	if (CurrentBulletsInBurst < 3)
+	{
+		CurrentBulletsInBurst++;
+		Server_Fire();
+
+		if (CanFire())
+		{
+			GetWorld()->GetTimerManager().SetTimer(
+				FireTimerHandle,
+				this,
+				&AWeaponBase::BurstFire,
+				WeaponData.FireSpeed,
+				false
+			);
+		}
+		else
+		{
+			AutoReload();
+		}
+	}
+	else
+	{
+		CurrentBulletsInBurst = 0;
+	}
+}
+
+void AWeaponBase::AutoReload()
+{
+
+}
+
+bool AWeaponBase::CanFire()
+{
+	return bIsFire && !bIsShooting && CurrentAmmo > 0;
+}
+
+void AWeaponBase::Server_Fire_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Server_Fire"));
+	FVector StartDirection;
+	FVector EndDirection;
+	
+	UBPF_Functions::GetLookDirection(200000.0f, this, StartDirection, EndDirection);
+
+	SpawnProjectile(StartDirection, EndDirection);
+	Multi_Fire();
+}
+
+void AWeaponBase::SpawnProjectile(FVector& StartDirection, FVector& EndDirection)
+{
+	CurrentAmmo--;
+	
+	if (!SkeletalMeshComponent) return;
+	FVector MuzzleLocation = SkeletalMeshComponent->GetSocketLocation(FName("Muzzle"));
+	
+	FHitResult HitResult;
+	FVector TargetLocation;
+	
+	FCollisionQueryParams CollisionParams;
+	CollisionParams.AddIgnoredActor(this);
+	CollisionParams.AddIgnoredActor(GetOwner());
+
+	const bool bHitLineTrace = GetWorld()->LineTraceSingleByChannel(HitResult, StartDirection, EndDirection, ECC_Camera, CollisionParams);
+	if (bHitLineTrace)
+	{
+		TargetLocation = HitResult.Location;
+	}
+	TargetLocation = HitResult.TraceEnd;
+	FVector EndLocation = MuzzleLocation + UKismetMathLibrary::FindLookAtRotation(MuzzleLocation, TargetLocation).Vector() * 10000;
+	
+	for (int32 i = 0; i < WeaponData.BulletInShoot; i++)
+	{
+		if (i != 0)
+		{
+			const bool bHitSphereTrace = GetWorld()->SweepSingleByChannel(
+				HitResult,
+				MuzzleLocation,
+				EndLocation,
+				FQuat::Identity,
+				ECC_Visibility,
+				FCollisionShape::MakeSphere(4.0f),
+				CollisionParams);
+			
+			Multi_Fire_Recoil();
+			if (bHitSphereTrace)
+			{
+				if (HitResult.Component->GetMaterial(0))
+				{
+					Multi_Spawn_Hit();
+				}
+
+				if (HitResult.GetActor()->Implements<UDamageInterface>())
+				{
+					IDamageInterface::Execute_TakeDamage(HitResult.GetActor(), 30, GetOwner());
+				}
+			}
+		}
+	}
+}
+
+void AWeaponBase::Multi_Fire_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Multi_Fire"));
+}
+
+void AWeaponBase::Multi_Fire_Recoil_Implementation()
+{
+
+}
+
+void AWeaponBase::Multi_Spawn_Hit_Implementation()
+{
+
 }

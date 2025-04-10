@@ -3,11 +3,13 @@
 
 #include "APlayerCharacter.h"
 
+#include "AOF/Core/Functions/BPF_Functions.h"
 #include "AOF/Core/Inventory/Component/Inventory/InventoryComponent.h"
 #include "AOF/Core/Inventory/Interface/ToItemInterface.h"
 #include "AOF/UI/Interface/ToUIInterface.h"
 #include "Camera/CameraComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Net/UnrealNetwork.h"
 
 
 AAPlayerCharacter::AAPlayerCharacter()
@@ -23,6 +25,10 @@ void AAPlayerCharacter::BeginPlay()
 void AAPlayerCharacter::SetNickname_Implementation(const FString& Nickname)
 {
 	const UWidgetComponent* WidgetComp = Cast<UWidgetComponent>(GetDefaultSubobjectByName(TEXT("PlayerNameTagWidget")));
+	if (!WidgetComp)
+	{
+		return;
+	}
 
 	UWidget* Widget = WidgetComp->GetWidget();
 	if (Widget && Widget->Implements<UToUIInterface>())
@@ -45,19 +51,19 @@ void AAPlayerCharacter::HandleInteract_Implementation()
 	if (CameraComponent && BP_PlayerController)
 	{
 		int32 ViewportX, ViewportY;
-		FVector WorldLocationStart, WorldDirection;
+		FVector StartDirection, EndDirection;
 	
 		BP_PlayerController->GetViewportSize(ViewportX, ViewportY);
-		BP_PlayerController->DeprojectScreenPositionToWorld(ViewportX / 2, ViewportY / 2, WorldLocationStart, WorldDirection);
+		BP_PlayerController->DeprojectScreenPositionToWorld(ViewportX / 2, ViewportY / 2, StartDirection, EndDirection);
 
 		const FRotator CameraRotation = CameraComponent->GetComponentRotation();
-		const FVector End = WorldLocationStart + (CameraRotation.Vector() * 220.0f);
-	
+		const FVector End = StartDirection + (CameraRotation.Vector() * 220.0f);
+		
 		FHitResult HitResult;
 		FCollisionQueryParams CollisionParams;
 		CollisionParams.AddIgnoredActor(this);
 
-		const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, WorldLocationStart, End, ECC_Visibility, CollisionParams);
+		const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartDirection, End, ECC_Visibility, CollisionParams);
 		if (bHit && HitResult.GetActor()->Implements<UToItemInterface>())
 		{
 			IToItemInterface::Execute_InteractItem(HitResult.GetActor(), this);
@@ -66,11 +72,11 @@ void AAPlayerCharacter::HandleInteract_Implementation()
 #if WITH_EDITOR
 		if (bHit)
 		{
-			DrawDebugLine(GetWorld(), WorldLocationStart, End, FColor::Green, false, 1, 0, 1);
+			DrawDebugLine(GetWorld(), StartDirection, End, FColor::Green, false, 1, 0, 1);
 		}
 		else
 		{
-			DrawDebugLine(GetWorld(), WorldLocationStart, End, FColor::Red, false, 1, 0, 1);
+			DrawDebugLine(GetWorld(), StartDirection, End, FColor::Red, false, 1, 0, 1);
 		}
 #endif
 
@@ -103,14 +109,14 @@ void AAPlayerCharacter::Multicast_Interact_Implementation(AActor* ItemPickUp, FI
 bool AAPlayerCharacter::AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
 {
 	UInventoryComponent* InventoryComponent = FindComponentByClass<UInventoryComponent>();
-	if (InventoryComponent && ItemPickUp && InventoryComponent->AddItem(InventoryItemPickUp))
-	{
-		ItemPickUp->Destroy();
-		return true;
-	} else
-	{
-		return false;
-	}
+	return InventoryComponent && ItemPickUp && InventoryComponent->AddItem(InventoryItemPickUp);
 }
 
 ////////////
+
+void UInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UInventoryComponent, InventoryItems);
+}

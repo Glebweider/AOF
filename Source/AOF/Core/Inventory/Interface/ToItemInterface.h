@@ -22,4 +22,10 @@ class AOF_API IToItemInterface
 public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
 	void InteractItem(AActor* CharacterInteract);
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Weapon")
+	void UseItem();
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Weapon")
+	void StopUseItem();
 };

@@ -3,6 +3,8 @@
 
 #include "InventoryComponent.h"
 
+#include "Net/UnrealNetwork.h"
+
 
 UInventoryComponent::UInventoryComponent()
 {
@@ -10,11 +12,36 @@ UInventoryComponent::UInventoryComponent()
 	MaxSlots = 28;
 }
 
-
-void UInventoryComponent::BeginPlay()
+void UInventoryComponent::Server_SpawnItemInHand_Implementation(const int32 ItemID)
 {
-	Super::BeginPlay();
-	
+	//const FInventoryItem* Item = FindItemByID(InventoryItems, ItemID)
+	if (!InventoryItems.IsEmpty())
+	{
+		if (InventoryItems.IsValidIndex(ItemID))
+		{
+			FInventoryItem Item = InventoryItems[ItemID];
+			
+			UE_LOG(LogTemp, Warning, TEXT("32432432422 %s"), *Item.ItemID.ToString());
+			if (SelectedItemInHand)
+			{
+				SelectedItemInHand->Destroy();
+			}
+
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Owner = GetOwner();
+			SpawnParams.Instigator = GetOwner()->GetInstigator();
+			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+			if (Item.ItemClass)
+			{
+				SelectedItemInHand = GetWorld()->SpawnActor<AActor>(Item.ItemClass, SpawnParams);
+				if (SelectedItemInHand)
+				{
+					SelectedItemInHand->AttachToComponent(GetOwner()->FindComponentByClass<USkeletalMeshComponent>(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("skt_rifle"));
+				}
+			}
+		}
+	}
 }
 
 bool UInventoryComponent::AddItem(const FInventoryItem Item)
@@ -32,4 +59,10 @@ bool UInventoryComponent::AddItem(const FInventoryItem Item)
 bool UInventoryComponent::RemoveItem(FName ItemID, int32 Quantity)
 {
 	return false;
+}
+
+void UInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(UInventoryComponent, SelectedItemInHand);
 }

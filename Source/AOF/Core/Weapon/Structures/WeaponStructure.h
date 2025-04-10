@@ -77,9 +77,6 @@ struct AOF_API FWeaponStruct : public FTableRowBase
 	
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FName HandSocket;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FName Name;
 	
 	
@@ -136,9 +133,6 @@ struct AOF_API FWeaponData
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	EAmmoType AmmoType = EAmmoType::Rifle;
 	
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FName HandSocket = FName("None");
 		
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FName Name = FName("None");

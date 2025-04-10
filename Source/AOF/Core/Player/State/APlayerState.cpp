@@ -12,9 +12,10 @@ void AAPlayerState::BeginPlay()
 	Super::BeginPlay();
 
 	APlayerController* PlayerController = Cast<APlayerController>(GetOwner());
-	if (PlayerController)
+	const FString& Nickname = GetPlayerName();
+	if (PlayerController && !Nickname.IsEmpty())
 	{
-		Server_SendMyNicknameToClient(GetPlayerName());
+		Server_SendMyNicknameToClient(Nickname);
 	}
 }
 

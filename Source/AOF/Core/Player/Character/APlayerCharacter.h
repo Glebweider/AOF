@@ -24,7 +24,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	bool AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
-	
+
 	virtual void SetNickname_Implementation(const FString& Nickname) override;
 	virtual void SetVisibilityButtonInteract_Implementation(UWidgetComponent* WidgetComponent, bool bVisibility) override;
 	virtual void HandleInteract_Implementation() override;

@@ -19,6 +19,9 @@ struct AOF_API FInventoryItem
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	int32 Quantity;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	bool bIsUsed;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	TSubclassOf<AActor> ItemClass;

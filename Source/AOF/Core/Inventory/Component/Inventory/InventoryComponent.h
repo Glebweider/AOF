@@ -15,20 +15,23 @@ class AOF_API UInventoryComponent : public UActorComponent
 
 public:
 	UInventoryComponent();
+	
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_SpawnItemInHand(const int32 ItemID);
 
-protected:
-	virtual void BeginPlay() override;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-	TArray<FInventoryItem> InventoryItems;
-
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
-	int32 MaxSlots;
-
-public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool AddItem(FInventoryItem Item);
 	
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool RemoveItem(FName ItemID, int32 Quantity = 1);
+	
+	UPROPERTY(Replicated, VisibleDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
+	AActor* SelectedItemInHand;
+	
+protected:
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	TArray<FInventoryItem> InventoryItems;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
+	int32 MaxSlots;
 };
