@@ -8,6 +8,7 @@
 #include "Engine/AssetManager.h"
 #include "Interface/Damage/DamageInterface.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Net/UnrealNetwork.h"
 #include "Structures/WeaponStructure.h"
 
 AWeaponBase::AWeaponBase()
@@ -21,11 +22,11 @@ void AWeaponBase::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 
 	
-	if (DataTableWeapon.IsNull()) return;
-	if (const auto WeaponDataRow = DataTableWeapon.GetRow<FWeaponStruct>(""))
+	if (DataTableWeapon.IsNull() && !RowName.IsValid()) return;
+	if (const auto WeaponDataRow = DataTableWeapon.DataTable->FindRow<FWeaponStruct>(RowName, TEXT("Loading Weapon Data")))
 	{
 		WeaponData.Damage = WeaponDataRow->Damage;
-		WeaponData.FireSpeed = WeaponDataRow->FireSpeed / 60;
+		WeaponData.FireSpeed = 60.0f / WeaponDataRow->FireSpeed;
 		WeaponData.BulletInShoot = WeaponDataRow->BulletInShoot;
 		WeaponData.AmmoMagazine = WeaponDataRow->AmmoMagazine;
 		WeaponData.MaxAmmoMagazine = WeaponDataRow->MaxAmmoMagazine;
@@ -50,7 +51,7 @@ void AWeaponBase::OnConstruction(const FTransform& Transform)
 		SkeletalMeshComponent = FindComponentByClass<USkeletalMeshComponent>();
 		if (IsValid(SkeletalMeshComponent))
 		{
-			FSoftObjectPath WeaponMeshPath = WeaponData.WeaponMesh.ToSoftObjectPath();
+			const FSoftObjectPath WeaponMeshPath = WeaponData.WeaponMesh.ToSoftObjectPath();
 			if (!WeaponMeshPath.IsValid()) return;
 
 			UAssetManager::GetStreamableManager().RequestAsyncLoad(WeaponMeshPath, [this]()
@@ -114,7 +115,6 @@ void AWeaponBase::InteractItem_Implementation(AActor* CharacterInteract)
 void AWeaponBase::UseItem_Implementation()
 {
 	bIsFire = true;
-	UE_LOG(LogTemp, Warning, TEXT("LOOOOOOOOG"));
 
 	if (!CanFire()) return;
 	switch (WeaponData.FireType)
@@ -128,7 +128,7 @@ void AWeaponBase::UseItem_Implementation()
 			break;
 
 		case EFireType::Single:
-			Server_Fire();
+			Fire();
 			AutoReload();
 			break;
 	}
@@ -143,18 +143,17 @@ void AWeaponBase::StopUseItem_Implementation()
 void AWeaponBase::AutoFire()
 {
 	if (!bIsFire || !CanFire()) return;
-
-	UE_LOG(LogTemp, Warning, TEXT("AutoFire"));
-	Server_Fire();
+	UE_LOG(LogTemp, Warning, TEXT("FIRE SPEED %f"), WeaponData.FireSpeed);
+	
+	Fire();
 	if (CanFire())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("AutoFire 1"));
 		GetWorld()->GetTimerManager().SetTimer(
 			FireTimerHandle,
 			this,
 			&AWeaponBase::AutoFire,
 			WeaponData.FireSpeed,
-			false
+			true
 		);
 	}
 	else
@@ -169,7 +168,7 @@ void AWeaponBase::BurstFire()
 	if (CurrentBulletsInBurst < 3)
 	{
 		CurrentBulletsInBurst++;
-		Server_Fire();
+		Fire();
 
 		if (CanFire())
 		{
@@ -178,7 +177,7 @@ void AWeaponBase::BurstFire()
 				this,
 				&AWeaponBase::BurstFire,
 				WeaponData.FireSpeed,
-				false
+				true
 			);
 		}
 		else
@@ -194,22 +193,25 @@ void AWeaponBase::BurstFire()
 
 void AWeaponBase::AutoReload()
 {
-
+	UE_LOG(LogTemp, Warning, TEXT("AutoReload"));
 }
 
 bool AWeaponBase::CanFire()
 {
+	UE_LOG(LogTemp, Warning, TEXT("CanFire %d"), CurrentAmmo);
 	return bIsFire && !bIsShooting && CurrentAmmo > 0;
 }
 
-void AWeaponBase::Server_Fire_Implementation()
-{
-	UE_LOG(LogTemp, Warning, TEXT("Server_Fire"));
+void AWeaponBase::Fire() {
 	FVector StartDirection;
 	FVector EndDirection;
 	
 	UBPF_Functions::GetLookDirection(200000.0f, this, StartDirection, EndDirection);
+	Server_Fire(StartDirection, EndDirection);
+}
 
+void AWeaponBase::Server_Fire_Implementation(FVector StartDirection, FVector EndDirection)
+{
 	SpawnProjectile(StartDirection, EndDirection);
 	Multi_Fire();
 }
@@ -229,6 +231,17 @@ void AWeaponBase::SpawnProjectile(FVector& StartDirection, FVector& EndDirection
 	CollisionParams.AddIgnoredActor(GetOwner());
 
 	const bool bHitLineTrace = GetWorld()->LineTraceSingleByChannel(HitResult, StartDirection, EndDirection, ECC_Camera, CollisionParams);
+	
+#if WITH_EDITOR
+	if (bHitLineTrace)
+	{
+		DrawDebugLine(GetWorld(), StartDirection, EndDirection, FColor::Green, false, 1, 0, 1);
+	}
+	else
+	{
+		DrawDebugLine(GetWorld(), StartDirection, EndDirection, FColor::Red, false, 1, 0, 1);
+	}
+#endif
 	if (bHitLineTrace)
 	{
 		TargetLocation = HitResult.Location;
@@ -279,4 +292,9 @@ void AWeaponBase::Multi_Fire_Recoil_Implementation()
 void AWeaponBase::Multi_Spawn_Hit_Implementation()
 {
 
+}
+void AWeaponBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AWeaponBase, CurrentAmmo);
 }

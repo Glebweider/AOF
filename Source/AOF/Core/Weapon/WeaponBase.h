@@ -23,17 +23,18 @@ public:
 	virtual void InteractItem_Implementation(AActor* CharacterInteract) override;
 	virtual void UseItem_Implementation() override;
 	virtual void StopUseItem_Implementation() override;
-	
+
+	virtual void Fire();
 	virtual void AutoFire();
 	virtual void BurstFire();
 	virtual void SpawnProjectile(FVector& StartDirection, FVector& EndDirection);
-
+	
 	virtual void AutoReload();
 	
 	virtual bool CanFire();
-	
+
 	UFUNCTION(Server, Reliable)
-	void Server_Fire();
+	void Server_Fire(FVector StartDirection, FVector EndDirection);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_Fire();
@@ -44,10 +45,15 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_Spawn_Hit();
 
-protected:
-	FTimerHandle FireTimerHandle;
 
+protected:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	FTimerHandle FireTimerHandle;
+	
 	int32 CurrentBulletsInBurst;
+	
+	UPROPERTY(Replicated)
 	int32 CurrentAmmo;
 
 	bool bIsFire = false;
@@ -55,6 +61,9 @@ protected:
 	
 	UPROPERTY()
 	USkeletalMeshComponent* SkeletalMeshComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	FName RowName;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FDataTableRowHandle DataTableWeapon;

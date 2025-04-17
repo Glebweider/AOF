@@ -29,6 +29,8 @@ public:
 	AActor* SelectedItemInHand;
 	
 protected:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	TArray<FInventoryItem> InventoryItems;
 

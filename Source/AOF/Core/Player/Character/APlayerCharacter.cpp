@@ -3,7 +3,6 @@
 
 #include "APlayerCharacter.h"
 
-#include "AOF/Core/Functions/BPF_Functions.h"
 #include "AOF/Core/Inventory/Component/Inventory/InventoryComponent.h"
 #include "AOF/Core/Inventory/Interface/ToItemInterface.h"
 #include "AOF/UI/Interface/ToUIInterface.h"
@@ -113,10 +112,3 @@ bool AAPlayerCharacter::AddItemToInventory(AActor* ItemPickUp, FInventoryItem In
 }
 
 ////////////
-
-void UInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(UInventoryComponent, InventoryItems);
-}
