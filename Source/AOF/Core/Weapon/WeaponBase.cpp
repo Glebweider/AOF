@@ -3,12 +3,17 @@
 
 #include "WeaponBase.h"
 
+#include "VectorUtil.h"
 #include "AOF/Core/Functions/BPF_Functions.h"
 #include "AOF/Core/Player/Interfaces/ToPlayer/ToPlayerInterface.h"
 #include "Engine/AssetManager.h"
+#include "GameFramework/Character.h"
 #include "Interface/Damage/DamageInterface.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "Particles/ParticleSystem.h"
+#include "Sound/SoundCue.h"
 #include "Structures/WeaponStructure.h"
 
 AWeaponBase::AWeaponBase()
@@ -73,13 +78,11 @@ void AWeaponBase::OnConstruction(const FTransform& Transform)
 void AWeaponBase::BeginPlay()
 {
 	Super::BeginPlay();
-
 	
 	AActor* OwnerActor = GetOwner();
 	if (!OwnerActor) return;
 	
 	Character = OwnerActor;
-	
 	SkeletalMeshComponent->HideBoneByName("Mag_low", PBO_None);
 
 	const FSoftObjectPath MagazinMeshPath = WeaponData.MagazineMesh.ToSoftObjectPath();
@@ -136,14 +139,17 @@ void AWeaponBase::UseItem_Implementation()
 
 void AWeaponBase::StopUseItem_Implementation()
 {
-	bIsFire	= false;
-	GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
+	bIsFire = false;
+	
+	if (!bIsShooting)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
+	}
 }
 
 void AWeaponBase::AutoFire()
 {
 	if (!bIsFire || !CanFire()) return;
-	UE_LOG(LogTemp, Warning, TEXT("FIRE SPEED %f"), WeaponData.FireSpeed);
 	
 	Fire();
 	if (CanFire())
@@ -177,7 +183,7 @@ void AWeaponBase::BurstFire()
 				this,
 				&AWeaponBase::BurstFire,
 				WeaponData.FireSpeed,
-				true
+				false
 			);
 		}
 		else
@@ -193,12 +199,17 @@ void AWeaponBase::BurstFire()
 
 void AWeaponBase::AutoReload()
 {
-	UE_LOG(LogTemp, Warning, TEXT("AutoReload"));
+	if (CurrentAmmo == 0)
+	{
+		if (CurrentAmmo != WeaponData.AmmoMagazine && !bIsReloading && WeaponData.MaxAmmoMagazine != 0)
+		{
+			Server_Reload();
+		}
+	}
 }
 
 bool AWeaponBase::CanFire()
 {
-	UE_LOG(LogTemp, Warning, TEXT("CanFire %d"), CurrentAmmo);
 	return bIsFire && !bIsShooting && CurrentAmmo > 0;
 }
 
@@ -267,7 +278,7 @@ void AWeaponBase::SpawnProjectile(FVector& StartDirection, FVector& EndDirection
 			{
 				if (HitResult.Component->GetMaterial(0))
 				{
-					Multi_Spawn_Hit();
+					Multi_Spawn_Hit(UPhysicalMaterial::DetermineSurfaceType(HitResult.PhysMaterial.Get()), HitResult.Location, HitResult.Component.Get());
 				}
 
 				if (HitResult.GetActor()->Implements<UDamageInterface>())
@@ -281,7 +292,134 @@ void AWeaponBase::SpawnProjectile(FVector& StartDirection, FVector& EndDirection
 
 void AWeaponBase::Multi_Fire_Implementation()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Multi_Fire"));
+	if (!LoadedMuzzleEmitter || !LoadedMuzzleSound)
+	{
+		TArray<FSoftObjectPath> AssetsToLoad;
+
+		if (WeaponData.MuzzleSound.ToSoftObjectPath().IsValid())
+		{
+			AssetsToLoad.Add(WeaponData.MuzzleSound.ToSoftObjectPath());
+		}
+		if (WeaponData.MuzzleEmitter.ToSoftObjectPath().IsValid())
+		{
+			AssetsToLoad.Add(WeaponData.MuzzleEmitter.ToSoftObjectPath());
+		}
+
+		FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
+		Streamable.RequestAsyncLoad(AssetsToLoad, FStreamableDelegate::CreateWeakLambda(this, [this]()
+		{
+			if (WeaponData.MuzzleSound.IsValid())
+			{
+				LoadedMuzzleSound = Cast<USoundCue>(WeaponData.MuzzleSound.Get());
+			}
+			if (WeaponData.MuzzleEmitter.IsValid())
+			{
+				LoadedMuzzleEmitter = Cast<UParticleSystem>(WeaponData.MuzzleEmitter.Get());
+			}
+		}));
+	}
+	
+	if (SkeletalMeshComponent)
+	{
+		if (LoadedMuzzleEmitter)
+		{
+			UGameplayStatics::SpawnEmitterAttached(
+				LoadedMuzzleEmitter,
+				SkeletalMeshComponent,
+				FName("Muzzle"),
+				FVector::ZeroVector,
+				FRotator::ZeroRotator,
+				EAttachLocation::SnapToTarget,
+				true
+			);
+		}
+
+		if (LoadedMuzzleSound)
+		{
+			UGameplayStatics::SpawnSoundAttached(
+				LoadedMuzzleSound,
+				SkeletalMeshComponent,
+				FName("Muzzle"),
+				FVector::ZeroVector,
+				EAttachLocation::SnapToTarget,
+				true
+			);
+		}
+	}
+}
+
+void AWeaponBase::Server_Reload_Implementation()
+{
+	bIsReloading = true;
+	Multi_Reload();
+}
+
+void AWeaponBase::Multi_Reload_Implementation()
+{
+    if (IsValid(LoadedReloadCharacterMontage))
+    {
+    	if (UAnimInstance* AnimInstance = Cast<ACharacter>(GetOwner())->GetMesh()->GetAnimInstance())
+    	{
+    		AnimInstance->Montage_Play(LoadedReloadCharacterMontage);
+    		
+            float Duration = LoadedReloadCharacterMontage->GetPlayLength();
+            if (Duration <= 0.f) Duration = 1.f;
+
+                FTimerHandle TimerHandle;
+                GetWorld()->GetTimerManager().SetTimer(
+                    TimerHandle,
+                    this,
+                    &AWeaponBase::ReloadAfterDelay,
+                    Duration,
+                    false
+                );}
+        return;
+    }
+	
+    const FSoftObjectPath MontagePath = WeaponData.ReloadCharacterMontage.ToSoftObjectPath();
+    if (!MontagePath.IsValid()) return;
+	
+    UAssetManager::GetStreamableManager().RequestAsyncLoad(
+        MontagePath,
+        [this]()
+        {
+            if (WeaponData.ReloadCharacterMontage.IsValid())
+            {
+                LoadedReloadCharacterMontage = WeaponData.ReloadCharacterMontage.Get();
+
+                if (UAnimInstance* AnimInstance = Cast<ACharacter>(GetOwner())->GetMesh()->GetAnimInstance())
+                {
+                    AnimInstance->Montage_Play(LoadedReloadCharacterMontage);
+                    	
+                    float Duration = LoadedReloadCharacterMontage->GetPlayLength();
+                    if (Duration <= 0.f) Duration = 1.f;
+                    	
+                    FTimerHandle TimerHandle;
+                    GetWorld()->GetTimerManager().SetTimer(
+                        TimerHandle,
+                        this,
+                        &AWeaponBase::ReloadAfterDelay,
+                        Duration,
+                        false
+                    );
+                }
+            }
+        }
+    );
+}
+
+void AWeaponBase::ReloadAfterDelay()
+{
+	CalculateAmmo();
+	bIsReloading = false;
+}
+
+void AWeaponBase::CalculateAmmo()
+{
+	int32 TempAmmo = WeaponData.MaxAmmoMagazine;
+		
+	WeaponData.MaxAmmoMagazine = UE::Geometry::VectorUtil::Clamp(WeaponData.MaxAmmoMagazine - (WeaponData.AmmoMagazine - CurrentAmmo), 0, WeaponData.MaxAmmoMagazine);
+	CurrentAmmo = TempAmmo - WeaponData.MaxAmmoMagazine + CurrentAmmo;
 }
 
 void AWeaponBase::Multi_Fire_Recoil_Implementation()
@@ -289,10 +427,57 @@ void AWeaponBase::Multi_Fire_Recoil_Implementation()
 
 }
 
-void AWeaponBase::Multi_Spawn_Hit_Implementation()
+void AWeaponBase::Multi_Spawn_Hit_Implementation(EPhysicalSurface SurfaceType, FVector Location, UPrimitiveComponent* Component)
 {
+	USoundBase* HitSound = nullptr;
+	UParticleSystem* HitEmitter = nullptr;
+	UMaterialInterface* HitDecal = nullptr;
 
+	/*switch (SurfaceType)
+	{
+		case SURFACE_FLESHDEFAULT:
+			HitSound = FleshSound;
+			HitEmitter = FleshEmitter;
+			HitDecal = FleshDecal;
+			break;
+		case SURFACE_METAL:
+			HitSound = MetalSound;
+			HitEmitter = MetalEmitter;
+			HitDecal = MetalDecal;
+			break;
+		default:
+			HitSound = DefaultSound;
+			HitEmitter = DefaultEmitter;
+			HitDecal = DefaultDecal;
+			break;
+	}
+	
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), HitSound, Location);
+	}
+	
+	if (HitEmitter)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), HitEmitter, Location, FRotator::ZeroRotator, FVector(1.0f), true);
+	}
+	
+	if (HitDecal && Component)
+	{
+		UGameplayStatics::SpawnDecalAttached(
+			HitDecal,
+			FVector(20.0f),
+			Component,
+			NAME_None,
+			Location,
+			FRotator::ZeroRotator,
+			EAttachLocation::KeepRelativeOffset,
+			10.0f
+		);
+	}
+	*/
 }
+
 void AWeaponBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);

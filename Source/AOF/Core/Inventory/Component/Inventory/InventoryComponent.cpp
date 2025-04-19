@@ -20,7 +20,6 @@ void UInventoryComponent::Server_SpawnItemInHand_Implementation(const int32 Item
 		{
 			FInventoryItem Item = InventoryItems[ItemID];
 			
-			UE_LOG(LogTemp, Warning, TEXT("32432432422 %s"), *Item.ItemID.ToString());
 			if (SelectedItemInHand)
 			{
 				SelectedItemInHand->Destroy();
@@ -33,11 +32,9 @@ void UInventoryComponent::Server_SpawnItemInHand_Implementation(const int32 Item
 
 			if (Item.ItemClass)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("Spawn ItemClass"));
 				SelectedItemInHand = GetWorld()->SpawnActor<AActor>(Item.ItemClass, SpawnParams);
 				if (SelectedItemInHand)
 				{
-					UE_LOG(LogTemp, Warning, TEXT("SelectedItemInHand"));
 					SelectedItemInHand->AttachToComponent(GetOwner()->FindComponentByClass<USkeletalMeshComponent>(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("skt_rifle"));
 				}
 			}
