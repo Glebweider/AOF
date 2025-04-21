@@ -8,7 +8,6 @@
 #include "AOF/UI/Interface/ToUIInterface.h"
 #include "Camera/CameraComponent.h"
 #include "Components/WidgetComponent.h"
-#include "Net/UnrealNetwork.h"
 
 
 AAPlayerCharacter::AAPlayerCharacter()
@@ -19,6 +18,9 @@ AAPlayerCharacter::AAPlayerCharacter()
 void AAPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	InventoryComponent = FindComponentByClass<UInventoryComponent>();
+	PlayerAbilityComponent = FindComponentByClass<UPlayerAbilityComponent>();
 }
 
 void AAPlayerCharacter::SetNickname_Implementation(const FString& Nickname)
@@ -63,9 +65,12 @@ void AAPlayerCharacter::HandleInteract_Implementation()
 		CollisionParams.AddIgnoredActor(this);
 
 		const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartDirection, End, ECC_Visibility, CollisionParams);
-		if (bHit && HitResult.GetActor()->Implements<UToItemInterface>())
+		if (bHit && !HitResult.GetActor()->GetOwner())
 		{
-			IToItemInterface::Execute_InteractItem(HitResult.GetActor(), this);
+			if (HitResult.GetActor()->Implements<UToItemInterface>())
+			{
+				IToItemInterface::Execute_InteractItem(HitResult.GetActor(), this);
+			}
 		}
 
 #if WITH_EDITOR
@@ -107,8 +112,15 @@ void AAPlayerCharacter::Multicast_Interact_Implementation(AActor* ItemPickUp, FI
 
 bool AAPlayerCharacter::AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
 {
-	UInventoryComponent* InventoryComponent = FindComponentByClass<UInventoryComponent>();
 	return InventoryComponent && ItemPickUp && InventoryComponent->AddItem(InventoryItemPickUp);
 }
 
 ////////////
+
+void AAPlayerCharacter::TakeDamage_Implementation(float Damage, AActor* Character)
+{
+	if (PlayerAbilityComponent)
+	{
+		PlayerAbilityComponent->TakeDamage(Damage, Character);
+	}
+}

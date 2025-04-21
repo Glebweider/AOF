@@ -3,14 +3,17 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AOF/Core/Inventory/Component/Inventory/InventoryComponent.h"
+#include "AOF/Core/Player/Components/Ability/PlayerAbilityComponent.h"
 #include "AOF/Core/Player/Interfaces/InputPlayer/InputPlayerInterface.h"
 #include "AOF/Core/Player/Interfaces/ToPlayer/ToPlayerInterface.h"
+#include "AOF/Core/Weapon/Interface/Damage/DamageInterface.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
 #include "APlayerCharacter.generated.h"
 
 UCLASS()
-class AOF_API AAPlayerCharacter : public ACharacter, public IToPlayerInterface, public IInputPlayerInterface
+class AOF_API AAPlayerCharacter : public ACharacter, public IToPlayerInterface, public IInputPlayerInterface, public IDamageInterface
 {
 	GENERATED_BODY()
 
@@ -29,6 +32,7 @@ protected:
 	virtual void SetVisibilityButtonInteract_Implementation(UWidgetComponent* WidgetComponent, bool bVisibility) override;
 	virtual void HandleInteract_Implementation() override;
 	virtual void PickUpItem_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp) override;
+	virtual void TakeDamage_Implementation(float Damage, AActor* Character) override;
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_Interact(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
@@ -38,4 +42,10 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, Category = "Player")
 	APlayerState* BP_PlayerState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UInventoryComponent* InventoryComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPlayerAbilityComponent* PlayerAbilityComponent;
 };

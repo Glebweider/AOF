@@ -63,7 +63,13 @@ void AWeaponBase::OnConstruction(const FTransform& Transform)
 			{
 				if (WeaponData.WeaponMesh.IsValid() && SkeletalMeshComponent)
 				{
-					SkeletalMeshComponent->SetSkeletalMeshAsset(WeaponData.WeaponMesh.Get());
+					USkeletalMesh* LoadedMesh = WeaponData.WeaponMesh.Get();
+					SkeletalMeshComponent->SetSkeletalMeshAsset(LoadedMesh);
+					
+					if (LoadedMesh->GetRefSkeleton().FindBoneIndex("Mag_low") != INDEX_NONE)
+					{
+						SkeletalMeshComponent->HideBoneByName(FName("Mag_low"), PBO_None);
+					}
 				}
 			});
 		}
@@ -81,9 +87,6 @@ void AWeaponBase::BeginPlay()
 	
 	AActor* OwnerActor = GetOwner();
 	if (!OwnerActor) return;
-	
-	Character = OwnerActor;
-	SkeletalMeshComponent->HideBoneByName("Mag_low", PBO_None);
 
 	const FSoftObjectPath MagazinMeshPath = WeaponData.MagazineMesh.ToSoftObjectPath();
 	if (!MagazinMeshPath.IsValid()) return;
@@ -119,21 +122,26 @@ void AWeaponBase::UseItem_Implementation()
 {
 	bIsFire = true;
 
-	if (!CanFire()) return;
-	switch (WeaponData.FireType)
+	if (CanFire())
 	{
-		case EFireType::Auto:
-			AutoFire();
-			break;
+		switch (WeaponData.FireType)
+		{
+			case EFireType::Auto:
+				AutoFire();
+				break;
 
-		case EFireType::Burst:
-			BurstFire();
-			break;
+			case EFireType::Burst:
+				BurstFire();
+				break;
 
-		case EFireType::Single:
-			Fire();
-			AutoReload();
-			break;
+			case EFireType::Single:
+				Fire();
+				AutoReload();
+				break;
+		}		
+	} else
+	{
+		AutoReload();
 	}
 }
 
@@ -149,11 +157,10 @@ void AWeaponBase::StopUseItem_Implementation()
 
 void AWeaponBase::AutoFire()
 {
-	if (!bIsFire || !CanFire()) return;
-	
-	Fire();
+	if (bIsReloading) return;
 	if (CanFire())
 	{
+		Fire();
 		GetWorld()->GetTimerManager().SetTimer(
 			FireTimerHandle,
 			this,
@@ -199,12 +206,9 @@ void AWeaponBase::BurstFire()
 
 void AWeaponBase::AutoReload()
 {
-	if (CurrentAmmo == 0)
+	if (CurrentAmmo == 0 && CurrentAmmo != WeaponData.AmmoMagazine && !bIsReloading && WeaponData.MaxAmmoMagazine != 0)
 	{
-		if (CurrentAmmo != WeaponData.AmmoMagazine && !bIsReloading && WeaponData.MaxAmmoMagazine != 0)
-		{
-			Server_Reload();
-		}
+		Server_Reload();
 	}
 }
 
@@ -235,56 +239,52 @@ void AWeaponBase::SpawnProjectile(FVector& StartDirection, FVector& EndDirection
 	FVector MuzzleLocation = SkeletalMeshComponent->GetSocketLocation(FName("Muzzle"));
 	
 	FHitResult HitResult;
-	FVector TargetLocation;
-	
 	FCollisionQueryParams CollisionParams;
 	CollisionParams.AddIgnoredActor(this);
 	CollisionParams.AddIgnoredActor(GetOwner());
 
 	const bool bHitLineTrace = GetWorld()->LineTraceSingleByChannel(HitResult, StartDirection, EndDirection, ECC_Camera, CollisionParams);
 	
-#if WITH_EDITOR
-	if (bHitLineTrace)
-	{
-		DrawDebugLine(GetWorld(), StartDirection, EndDirection, FColor::Green, false, 1, 0, 1);
-	}
-	else
-	{
-		DrawDebugLine(GetWorld(), StartDirection, EndDirection, FColor::Red, false, 1, 0, 1);
-	}
-#endif
-	if (bHitLineTrace)
-	{
-		TargetLocation = HitResult.Location;
-	}
-	TargetLocation = HitResult.TraceEnd;
-	FVector EndLocation = MuzzleLocation + UKismetMathLibrary::FindLookAtRotation(MuzzleLocation, TargetLocation).Vector() * 10000;
+	FVector Direction = UKismetMathLibrary::FindLookAtRotation(MuzzleLocation, bHitLineTrace ? HitResult.Location : HitResult.TraceEnd).Vector();
+	FVector EndLocation = MuzzleLocation + Direction * 10000;
 	
 	for (int32 i = 0; i < WeaponData.BulletInShoot; i++)
 	{
-		if (i != 0)
-		{
-			const bool bHitSphereTrace = GetWorld()->SweepSingleByChannel(
-				HitResult,
-				MuzzleLocation,
-				EndLocation,
-				FQuat::Identity,
-				ECC_Visibility,
-				FCollisionShape::MakeSphere(4.0f),
-				CollisionParams);
+		
+		FHitResult SphereHit;
+		const bool bHitSphere = GetWorld()->SweepSingleByChannel(
+			SphereHit,
+			MuzzleLocation,
+			EndLocation,
+			FQuat::Identity,
+			ECC_Camera,
+			FCollisionShape::MakeSphere(4.0f),
+			CollisionParams);
 			
-			Multi_Fire_Recoil();
-			if (bHitSphereTrace)
+#if WITH_EDITOR
+			FColor LineColor = bHitSphere ? FColor::Green : FColor::Red;
+			DrawDebugLine(GetWorld(), MuzzleLocation, EndLocation, LineColor, false, 2.f, 0, 1.f);
+			
+			if (bHitSphere)
 			{
-				if (HitResult.Component->GetMaterial(0))
-				{
-					Multi_Spawn_Hit(UPhysicalMaterial::DetermineSurfaceType(HitResult.PhysMaterial.Get()), HitResult.Location, HitResult.Component.Get());
-				}
+				DrawDebugSphere(GetWorld(), SphereHit.Location, 8.f, 12, FColor::Yellow, false, 2.f);
+			}
+#endif
+			
+		Multi_Fire_Recoil();
+		if (bHitSphere)
+		{
+			if (SphereHit.Component.IsValid() && SphereHit.Component->GetMaterial(0))
+			{
+				Multi_Spawn_Hit(UPhysicalMaterial::DetermineSurfaceType(SphereHit.PhysMaterial.Get()), SphereHit.Location, SphereHit.Component.Get());
+			}
+			
+			if (SphereHit.GetActor()->Implements<UDamageInterface>())
+			{
 
-				if (HitResult.GetActor()->Implements<UDamageInterface>())
-				{
-					IDamageInterface::Execute_TakeDamage(HitResult.GetActor(), 30, GetOwner());
-				}
+				// Damage Calculate
+					
+				IDamageInterface::Execute_TakeDamage(SphereHit.GetActor(), 30, GetOwner());
 			}
 		}
 	}
@@ -482,4 +482,5 @@ void AWeaponBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AWeaponBase, CurrentAmmo);
+	DOREPLIFETIME(AWeaponBase, bIsReloading);
 }

@@ -15,8 +15,20 @@ class AOF_API UPlayerAbilityComponent : public UActorComponent
 public:
 	UPlayerAbilityComponent();
 
+	float GetHealth() const { return Health; }
+	virtual void TakeDamage(float Damage, AActor* Character);
+
 protected:
 	virtual void BeginPlay() override;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
+	ACharacter* Player;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
+	APlayerController* PlayerController;
+
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<UUserWidget> DeadScreenWidgetClass;
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerAbility", meta = (AllowPrivateAccess = "true"))
@@ -25,11 +37,12 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerAbility", meta = (AllowPrivateAccess = "true"))
 	float Health = 0.0f;
 
-public:
-	float GetHealth() const { return Health; }
+	UFUNCTION(Client, Reliable)
+	void Client_PlayerDie();
 
-	void SetHealth(float NewHealth) 
-	{ 
-		Health = FMath::Clamp(NewHealth, 0.0f, MaxHealth);
-	}
+	UFUNCTION(Server, Reliable)
+	void Server_PlayerDie();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_PlayerDie();
 };

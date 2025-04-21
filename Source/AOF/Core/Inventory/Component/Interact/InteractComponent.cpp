@@ -19,11 +19,10 @@ UInteractComponent::UInteractComponent()
 		SphereCollision = CreateDefaultSubobject<USphereComponent>(TEXT("SphereCollision"));
 		if (SphereCollision)
 		{
-			SphereCollision->InitSphereRadius(30.0f);
+			SphereCollision->InitSphereRadius(60.0f);
 			SphereCollision->OnComponentBeginOverlap.AddDynamic(this, &UInteractComponent::OnBeginOverlap);
 			SphereCollision->OnComponentEndOverlap.AddDynamic(this, &UInteractComponent::OnEndOverlap);
 			SphereCollision->AttachToComponent(Owner->GetRootComponent(), FAttachmentTransformRules::KeepWorldTransform);
-			
 		}
 	}
 }

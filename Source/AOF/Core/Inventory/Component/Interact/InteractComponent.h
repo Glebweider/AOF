@@ -19,17 +19,17 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-
-	UPROPERTY(VisibleAnywhere, Category = "Collision")
-	class USphereComponent* SphereCollision;
-
+	
 	UPROPERTY(VisibleAnywhere, Category = "UI")
 	UWidgetComponent* InteractionWidget;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,  Category = "UI")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<class UUserWidget> WidgetReference;
-
-	UPROPERTY(VisibleAnywhere, Category = "Data")
+	
+	UPROPERTY()
+	class USphereComponent* SphereCollision;
+	
+	UPROPERTY()
 	AActor* Owner;
 
 	UFUNCTION()

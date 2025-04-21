@@ -92,9 +92,6 @@ protected:
 	USkeletalMeshComponent* SkeletalMeshComponent = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
-	AActor* Character = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	AController* Controller = nullptr;
 
 	/** Data */
