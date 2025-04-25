@@ -30,13 +30,12 @@ void AAPlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	
 	if (IsLocallyControlled() || HasAuthority())
 	{
 		FRotator PawnRotation = GetControlRotation();
 		float RotatorX = (PawnRotation.Pitch > 180.0f ? 360.0f - PawnRotation.Pitch : PawnRotation.Pitch * -1.0f) / 3.0f;
 		
-		ControlRotationSync = FRotator(RotatorX, 0.0f, 0.0f);
+		ControlRotationSync = FRotator(0.0f, 0.0f, RotatorX);
 	}
 }
 

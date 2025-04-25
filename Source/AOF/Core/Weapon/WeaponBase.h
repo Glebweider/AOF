@@ -103,7 +103,7 @@ protected:
 	UPROPERTY()
 	USkeletalMeshComponent* SkeletalMeshComponent = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	UPROPERTY()
 	AController* Controller = nullptr;
 
 	/** Data */
