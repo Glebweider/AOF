@@ -95,9 +95,11 @@ void AWeaponBase::BeginPlay()
 	{
 		if (WeaponData.WeaponMesh.IsValid() && SkeletalMeshComponent)
 		{
-			UStaticMeshComponent* MagMeshComponent = NewObject<UStaticMeshComponent>(this, UStaticMeshComponent::StaticClass(), FName("Mag"));
+			MagMeshComponent = NewObject<UStaticMeshComponent>(this, UStaticMeshComponent::StaticClass(), FName("Mag"));
 			if (!MagMeshComponent) return;
-
+			
+			MagStaticMesh = WeaponData.MagazineMesh.Get();
+			
 			MagMeshComponent->RegisterComponent();
 			MagMeshComponent->SetStaticMesh(WeaponData.MagazineMesh.Get());
 			MagMeshComponent->AttachToComponent(SkeletalMeshComponent, FAttachmentTransformRules::KeepRelativeTransform, FName("Mag"));
@@ -154,6 +156,33 @@ void AWeaponBase::StopUseItem_Implementation()
 		GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
 	}
 }
+
+//////// GET/SET Interfaces
+
+void AWeaponBase::SetMagazineVariableSkeletalMeshComponent_Implementation(UStaticMeshComponent* MagMesh)
+{
+	MagMeshComponent = MagMesh;
+}
+
+UStaticMesh* AWeaponBase::GetMagStaticMesh_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("MagStaticMesh %p"), MagStaticMesh);
+	return MagStaticMesh;
+}
+
+UStaticMeshComponent* AWeaponBase::GetMagStaticMeshComponent_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("MagMeshComponent %p"), MagMeshComponent);
+	return MagMeshComponent;
+}
+
+USkeletalMeshComponent* AWeaponBase::GetWeaponSkeletalMeshComponent_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("SkeletalMeshComponent %p"), SkeletalMeshComponent);
+	return SkeletalMeshComponent;
+}
+
+////////
 
 void AWeaponBase::AutoFire()
 {
@@ -281,14 +310,68 @@ void AWeaponBase::SpawnProjectile(FVector& StartDirection, FVector& EndDirection
 			
 			if (SphereHit.GetActor()->Implements<UDamageInterface>())
 			{
-
-				// Damage Calculate
-					
-				IDamageInterface::Execute_TakeDamage(SphereHit.GetActor(), 30, GetOwner());
+				float Damage = CalculateDamage(SphereHit.BoneName);
+				IDamageInterface::Execute_TakeDamage(SphereHit.GetActor(), Damage, GetOwner());
 			}
 		}
 	}
 }
+
+float AWeaponBase::CalculateDamage(FName BoneHit)
+{
+	float BaseDamage = WeaponData.Damage;
+	float RandomDamage = FMath::FRandRange(BaseDamage * 0.7f, BaseDamage * 1.1f);
+	float FinalDamage = RandomDamage;
+	
+	TMap<FName, float> BoneMultipliers = {
+		{ "head", 2.5f },
+		{ "neck1", 2.0f },
+        
+		{ "spine_01", 1.0f },
+		{ "spine_02", 1.0f },
+		{ "spine_03", 1.0f },
+		{ "pelvis", 0.9f },
+
+		{ "upperarm_l", 0.7f },
+		{ "upperarm_r", 0.7f },
+		{ "lowerarm_l", 0.7f },
+		{ "lowerarm_r", 0.7f },
+
+		{ "thigh_l", 0.6f },
+		{ "thigh_r", 0.6f },
+		{ "calf_l", 0.6f },
+		{ "calf_r", 0.6f },
+		{ "foot_l", 0.6f },
+		{ "foot_r", 0.6f },
+		{ "ball_l", 0.6f },
+		{ "ball_r", 0.6f }
+	};
+
+	float BoneMultiplier = 1.0f;
+	if (BoneMultipliers.Contains(BoneHit))
+	{
+		BoneMultiplier = BoneMultipliers[BoneHit];
+	}
+
+	FinalDamage *= BoneMultiplier;
+	
+	if (BoneHit == "head" || BoneHit == "neck1")
+	{
+		FinalDamage *= WeaponData.HeadMultiplier;
+	}
+	else if (
+		BoneHit == "thigh_r" || BoneHit == "thigh_l" ||
+		BoneHit == "calf_r" || BoneHit == "calf_l" ||
+		BoneHit == "foot_r" || BoneHit == "foot_l" ||
+		BoneHit == "ball_r" || BoneHit == "ball_l")
+	{
+		FinalDamage *= WeaponData.LegsMultiplier;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Bone: %s"), *BoneHit.ToString());
+	UE_LOG(LogTemp, Warning, TEXT("Damage: %f"), FinalDamage);
+	return FinalDamage;
+};
 
 void AWeaponBase::Multi_Fire_Implementation()
 {

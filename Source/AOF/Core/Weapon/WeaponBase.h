@@ -6,11 +6,12 @@
 #include "AOF/Core/Inventory/ItemBase.h"
 #include "AOF/Core/Inventory/Interface/ToItemInterface.h"
 #include "GameFramework/Actor.h"
+#include "Interface/ToWeapon/ToWeaponInterface.h"
 #include "Structures/WeaponStructure.h"
 #include "WeaponBase.generated.h"
 
 UCLASS()
-class AOF_API AWeaponBase : public AItemBase, public IToItemInterface
+class AOF_API AWeaponBase : public AItemBase, public IToItemInterface, public IToWeaponInterface
 {
 	GENERATED_BODY()
 
@@ -25,6 +26,13 @@ public:
 	virtual void InteractItem_Implementation(AActor* CharacterInteract) override;
 	virtual void UseItem_Implementation() override;
 	virtual void StopUseItem_Implementation() override;
+	virtual void SetMagazineVariableSkeletalMeshComponent_Implementation(UStaticMeshComponent* MagMesh) override;
+	virtual UStaticMesh* GetMagStaticMesh_Implementation();
+	virtual UStaticMeshComponent* GetMagStaticMeshComponent_Implementation();
+	virtual USkeletalMeshComponent* GetWeaponSkeletalMeshComponent_Implementation() override;
+
+protected:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	/** Server RPCs */
 	UFUNCTION(Server, Reliable)
@@ -32,7 +40,7 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_Reload();
-
+	
 	/** Multicast RPCs */
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_Reload();
@@ -45,9 +53,6 @@ public:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_Spawn_Hit(EPhysicalSurface SurfaceType, FVector Location, UPrimitiveComponent* Component);
-
-protected:
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	/** Weapon Usage */
 	virtual void Fire();
@@ -60,7 +65,8 @@ protected:
 	void SpawnProjectile(FVector& StartDirection, FVector& EndDirection);
 	void ReloadAfterDelay();
 	void CalculateAmmo();
-
+	float CalculateDamage(FName BoneHit);
+	
 	/** Fire Logic */
 	FTimerHandle FireTimerHandle;
 	int32 CurrentBulletsInBurst = 0;
@@ -78,6 +84,12 @@ protected:
 	bool bIsShooting = false;
 
 	/** Assets */
+	UPROPERTY()
+	UStaticMeshComponent* MagMeshComponent = nullptr;
+
+	UPROPERTY()
+	UStaticMesh* MagStaticMesh = nullptr;
+	
 	UPROPERTY()
 	USoundCue* LoadedMuzzleSound = nullptr;
 

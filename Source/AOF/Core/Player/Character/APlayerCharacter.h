@@ -23,9 +23,15 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_Interact(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
 
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_TakeMagazine();
+
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	void Multi_TakeMagazine_Implementation();
 	bool AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
 
 	virtual void SetNickname_Implementation(const FString& Nickname) override;
@@ -37,8 +43,20 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_Interact(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_TakeMagazine();
+	
+	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Player")
+	bool bIsCrouch;
+
+	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Player")
+	FRotator ControlRotationSync;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Player")
 	APlayerController* BP_PlayerController;
+
+	UPROPERTY()
+	USkeletalMeshComponent* SkeletalMeshComponent = nullptr;
 
 	UPROPERTY(BlueprintReadWrite, Category = "Player")
 	APlayerState* BP_PlayerState;

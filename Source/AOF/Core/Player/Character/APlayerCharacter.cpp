@@ -5,14 +5,16 @@
 
 #include "AOF/Core/Inventory/Component/Inventory/InventoryComponent.h"
 #include "AOF/Core/Inventory/Interface/ToItemInterface.h"
+#include "AOF/Core/Weapon/Interface/ToWeapon/ToWeaponInterface.h"
 #include "AOF/UI/Interface/ToUIInterface.h"
 #include "Camera/CameraComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Net/UnrealNetwork.h"
 
 
 AAPlayerCharacter::AAPlayerCharacter()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 }
 
 void AAPlayerCharacter::BeginPlay()
@@ -21,6 +23,21 @@ void AAPlayerCharacter::BeginPlay()
 
 	InventoryComponent = FindComponentByClass<UInventoryComponent>();
 	PlayerAbilityComponent = FindComponentByClass<UPlayerAbilityComponent>();
+	SkeletalMeshComponent = FindComponentByClass<USkeletalMeshComponent>();
+}
+
+void AAPlayerCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	
+	
+	if (IsLocallyControlled() || HasAuthority())
+	{
+		FRotator PawnRotation = GetControlRotation();
+		float RotatorX = (PawnRotation.Pitch > 180.0f ? 360.0f - PawnRotation.Pitch : PawnRotation.Pitch * -1.0f) / 3.0f;
+		
+		ControlRotationSync = FRotator(RotatorX, 0.0f, 0.0f);
+	}
 }
 
 void AAPlayerCharacter::SetNickname_Implementation(const FString& Nickname)
@@ -102,11 +119,39 @@ void AAPlayerCharacter::Server_Interact_Implementation(AActor* ItemPickUp, FInve
 	}
 }
 
+void AAPlayerCharacter::Server_TakeMagazine_Implementation()
+{
+	Multi_TakeMagazine();
+}
+
 void AAPlayerCharacter::Multicast_Interact_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
 {
 	if (ItemPickUp)
 	{
 		ItemPickUp->Destroy();
+	}
+}
+
+void AAPlayerCharacter::Multi_TakeMagazine_Implementation()
+{
+	FTransform SpawnTransform;
+	SpawnTransform = SkeletalMeshComponent->GetSocketTransform(FName("skt_Mag"), RTS_World);
+	
+	UStaticMeshComponent* MagMeshComponent = NewObject<UStaticMeshComponent>(this, UStaticMeshComponent::StaticClass(), FName("Magazine"));
+	if (MagMeshComponent && SpawnTransform.IsValid())
+	{
+		MagMeshComponent->RegisterComponent();
+		MagMeshComponent->SetWorldTransform(SpawnTransform);
+		if (InventoryComponent->SelectedItemInHand->Implements<UToWeaponInterface>())
+		{
+			UStaticMesh* MagazineStaticMesh = IToWeaponInterface::Execute_GetMagazineMesh(InventoryComponent->SelectedItemInHand);
+			if (MagazineStaticMesh)
+			{
+				MagMeshComponent->SetStaticMesh(MagazineStaticMesh);
+				IToWeaponInterface::Execute_SetMagazineVariableSkeletalMeshComponent(InventoryComponent->SelectedItemInHand, MagMeshComponent);
+				MagMeshComponent->AttachToComponent(SkeletalMeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("skt_Mag"));
+			}
+		}
 	}
 }
 
@@ -123,4 +168,11 @@ void AAPlayerCharacter::TakeDamage_Implementation(float Damage, AActor* Characte
 	{
 		PlayerAbilityComponent->TakeDamage(Damage, Character);
 	}
+}
+
+void AAPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AAPlayerCharacter, bIsCrouch);
+	DOREPLIFETIME(AAPlayerCharacter, ControlRotationSync);
 }
