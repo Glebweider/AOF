@@ -26,6 +26,10 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_TakeMagazine();
 
+	virtual AActor* GetItemInHand() const { return InventoryComponent ? InventoryComponent->SelectedItemInHand : nullptr; };
+	virtual USkeletalMeshComponent* GetSkeletalMeshComponent() const { return SkeletalMeshComponent; };
+	virtual FRotator GetControlRotationSync() const { return ControlRotationSync; };
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;

@@ -26,10 +26,11 @@ public:
 	virtual void InteractItem_Implementation(AActor* CharacterInteract) override;
 	virtual void UseItem_Implementation() override;
 	virtual void StopUseItem_Implementation() override;
-	virtual void SetMagazineVariableSkeletalMeshComponent_Implementation(UStaticMeshComponent* MagMesh) override;
-	virtual UStaticMesh* GetMagStaticMesh_Implementation();
-	virtual UStaticMeshComponent* GetMagStaticMeshComponent_Implementation();
-	virtual USkeletalMeshComponent* GetWeaponSkeletalMeshComponent_Implementation() override;
+	virtual void SetMagazineVariableSkeletalMeshComponent_Implementation(UStaticMeshComponent* MagMesh) override { MagMeshComponent = MagMesh; };
+	virtual bool GetIsReloading_Implementation() override { return bIsReloading; };
+	virtual UStaticMesh* GetMagStaticMesh_Implementation() const { return MagStaticMesh; };
+	virtual UStaticMeshComponent* GetMagStaticMeshComponent_Implementation() const { return MagMeshComponent; };
+	virtual USkeletalMeshComponent* GetWeaponSkeletalMeshComponent_Implementation() override { return SkeletalMeshComponent; };
 
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -58,6 +59,7 @@ protected:
 	virtual void Fire();
 	virtual void AutoFire();
 	virtual void BurstFire();
+	virtual void SingleFire();
 	virtual void AutoReload();
 	virtual bool CanFire();
 
@@ -81,7 +83,7 @@ protected:
 	bool bIsFire = false;
 
 	UPROPERTY()
-	bool bIsShooting = false;
+	bool bIsShoot = false;
 
 	/** Assets */
 	UPROPERTY()
@@ -95,7 +97,10 @@ protected:
 
 	UPROPERTY()
 	UParticleSystem* LoadedMuzzleEmitter = nullptr;
-
+	
+	UPROPERTY()
+	UAnimSequence* LoadedFireAnimation = nullptr;
+	
 	UPROPERTY()
 	UAnimMontage* LoadedReloadCharacterMontage = nullptr;
 
