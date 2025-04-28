@@ -35,8 +35,8 @@ void UAPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 void UAPlayerAnimInstance::InitializeVariables()
 {
-	ItemInHand = PlayerCharacter->GetItemInHand();
-	bIsFalling = CharacterMovement->IsFalling();
+	ItemInHand = PlayerCharacter.Get()->GetItemInHand();
+	bIsFalling = CharacterMovement.Get()->IsFalling();
 	
 	InitSpeedDirection();
 	InitPitch();
@@ -44,24 +44,25 @@ void UAPlayerAnimInstance::InitializeVariables()
 
 void UAPlayerAnimInstance::InitSpeedDirection()
 {
-	FVector PlayerVelocity = PlayerCharacter->GetVelocity();
-	FRotator PlayerRotation = PlayerCharacter->GetActorRotation();
+	FVector PlayerVelocity = PlayerCharacter.Get()->GetVelocity();
+	FRotator PlayerRotation = PlayerCharacter.Get()->GetActorRotation();
 
 	Speed = PlayerVelocity.Length();
 	Direction = UKismetAnimationLibrary::CalculateDirection(PlayerVelocity, PlayerRotation);
 
-	bIsSprint = Speed >= CharacterMovement->MaxWalkSpeed - 5;
-	bIsShouldMove = Speed > 3 && CharacterMovement->GetCurrentAcceleration() != FVector::ZeroVector;
+	float MaxWalkSpeed = CharacterMovement.Get()->MaxWalkSpeed > 0 ? CharacterMovement.Get()->MaxWalkSpeed : 600;
+	bIsSprint = Speed >= MaxWalkSpeed - 5;
+	bIsShouldMove = Speed > 3 && CharacterMovement.Get()->GetCurrentAcceleration() != FVector::ZeroVector;
 }
 
 void UAPlayerAnimInstance::InitPitch()
 {
-	FRotator PlayerControlRotationSync = PlayerCharacter->GetControlRotationSync();
+	FRotator PlayerControlRotationSync = PlayerCharacter.Get()->GetControlRotationSync();
 	AimRotator = PlayerControlRotationSync;
 
 	FRotator PlayerDeltaRotator = UKismetMathLibrary::NormalizedDeltaRotator(
 		PlayerControlRotationSync,
-		PlayerCharacter->GetActorRotation());
+		PlayerCharacter.Get()->GetActorRotation());
 	FRotator PlayerRInterpToRotator = UKismetMathLibrary::RInterpTo(
 		FRotator(Pitch, 0.f, 0.f),
 		PlayerDeltaRotator,
@@ -73,7 +74,7 @@ void UAPlayerAnimInstance::InitPitch()
 		-90.f,
 		90.f);
 
-	if (ItemInHand.IsValid() && ItemInHand->Implements<UToWeaponInterface>())
+	if (ItemInHand.IsValid() && ItemInHand.Get()->Implements<UToWeaponInterface>())
 	{
 		bool bIsPlayerReloading = IToWeaponInterface::Execute_GetIsReloading(ItemInHand.Get());
 		LeftHandIKAlpha = UKismetMathLibrary::Lerp(
@@ -85,7 +86,7 @@ void UAPlayerAnimInstance::InitPitch()
 
 void UAPlayerAnimInstance::SnapToWeaponLeftHand()
 {
-	if (ItemInHand.IsValid() && ItemInHand->Implements<UToWeaponInterface>())
+	if (ItemInHand.IsValid() && ItemInHand.Get()->Implements<UToWeaponInterface>())
 	{
 		USkeletalMeshComponent* WeaponSkeletalMeshComponent = IToWeaponInterface::Execute_GetWeaponSkeletalMeshComponent(ItemInHand.Get());
 		if (WeaponSkeletalMeshComponent)
@@ -97,7 +98,7 @@ void UAPlayerAnimInstance::SnapToWeaponLeftHand()
 				FName("IK_Hand_L"),
 				RTS_World);
 			
-			PlayerCharacter->GetSkeletalMeshComponent()->TransformToBoneSpace(
+			PlayerCharacter.Get()->GetSkeletalMeshComponent()->TransformToBoneSpace(
 				FName("hand_r"),
 				IK_Hand_L.GetLocation(),
 				IK_Hand_L.Rotator(),
