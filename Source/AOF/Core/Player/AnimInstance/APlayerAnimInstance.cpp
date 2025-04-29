@@ -33,6 +33,25 @@ void UAPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	}
 }
 
+void UAPlayerAnimInstance::OnNotifyTriggered(const ENotifyType Notify)
+{
+	switch (Notify)
+	{
+	case ENotifyType::Drop_Magazine:
+		NotifyDropMagazine();
+		break;
+	case ENotifyType::Place_Magazine:
+		NotifyPlaceMagazine();
+		break;
+	case ENotifyType::Take_Magazine:
+		NotifyTakeMagazine();
+		break;
+	case ENotifyType::Remove_Magazine:
+		NotifyRemoveMagazine();
+		break;	
+	}
+}
+
 void UAPlayerAnimInstance::InitializeVariables()
 {
 	ItemInHand = PlayerCharacter.Get()->GetItemInHand();
@@ -107,5 +126,57 @@ void UAPlayerAnimInstance::SnapToWeaponLeftHand()
 			
 			LeftHandIKTransform = FTransform(OutRotation, OutPosition, FVector(1.0f, 1.0f, 1.0f));
 		}
+	}
+}
+
+UStaticMeshComponent* UAPlayerAnimInstance::DetachMagazine()
+{
+	if (ItemInHand.IsValid())
+	{
+		if (auto MagazineMesh = IToWeaponInterface::Execute_GetMagazineMeshComponent(ItemInHand.Get()))
+		{
+			MagazineMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+			return MagazineMesh;
+		}
+	}
+	
+	return nullptr;
+}
+
+void UAPlayerAnimInstance::NotifyDropMagazine()
+{
+	if (auto MagazineMesh = DetachMagazine())
+	{
+		MagazineMesh->SetSimulatePhysics(true);
+	}
+}
+
+void UAPlayerAnimInstance::NotifyPlaceMagazine()
+{
+	if (auto MagazineMesh = DetachMagazine(); auto WeaponMesh = IToWeaponInterface::Execute_GetWeaponSkeletalMeshComponent(ItemInHand.Get()))
+	{
+		MagazineMesh->AttachToComponent(
+			WeaponMesh,
+			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+			FName("mag"));
+	}
+}
+
+void UAPlayerAnimInstance::NotifyTakeMagazine()
+{
+	if (PlayerCharacter.Get())
+	{
+		IToPlayerInterface::Execute_TakeMagazine(PlayerCharacter.Get());
+	}
+}
+
+void UAPlayerAnimInstance::NotifyRemoveMagazine()
+{
+	if (auto MagazineMesh = DetachMagazine(); auto PlayerCharacterMesh = PlayerCharacter.Get()->GetSkeletalMeshComponent())
+	{
+		MagazineMesh->AttachToComponent(
+			PlayerCharacterMesh,
+			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+			FName("skt_Mag"));
 	}
 }

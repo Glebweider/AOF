@@ -105,11 +105,6 @@ void AAPlayerCharacter::HandleInteract_Implementation()
 
 //////////// PICK UP
 
-void AAPlayerCharacter::PickUpItem_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
-{
-	Server_Interact(ItemPickUp, InventoryItemPickUp);
-}
-
 void AAPlayerCharacter::Server_Interact_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
 {
 	if (AddItemToInventory(ItemPickUp, InventoryItemPickUp))
@@ -160,14 +155,6 @@ bool AAPlayerCharacter::AddItemToInventory(AActor* ItemPickUp, FInventoryItem In
 }
 
 ////////////
-
-void AAPlayerCharacter::TakeDamage_Implementation(float Damage, AActor* Character)
-{
-	if (PlayerAbilityComponent)
-	{
-		PlayerAbilityComponent->TakeDamage(Damage, Character);
-	}
-}
 
 void AAPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {

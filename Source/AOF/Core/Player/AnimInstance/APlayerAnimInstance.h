@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
 #include "AOF/Core/Player/Character/APlayerCharacter.h"
+#include "AOF/Core/Player/Notifies/ENotifyType.h"
 #include "APlayerAnimInstance.generated.h"
 
 /**
@@ -20,8 +21,17 @@ public:
 
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+	virtual void OnNotifyTriggered(const ENotifyType Notify);
+
+	/** Helpers */
+	virtual UStaticMeshComponent* DetachMagazine();
+	virtual void NotifyDropMagazine();
+	virtual void NotifyPlaceMagazine();
+	virtual void NotifyTakeMagazine();
+	virtual void NotifyRemoveMagazine();
 	
 protected:
+	/** Helpers */
 	virtual void SnapToWeaponLeftHand();
 	virtual void InitializeVariables();
 	virtual void InitSpeedDirection();

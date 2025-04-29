@@ -20,12 +20,22 @@ class AOF_API AAPlayerCharacter : public ACharacter, public IToPlayerInterface, 
 public:
 	AAPlayerCharacter();
 	
+	/** Server RPCs */
 	UFUNCTION(Server, Reliable)
 	void Server_Interact(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_TakeMagazine();
 
+	/** Interfaces */
+	virtual void SetNickname_Implementation(const FString& Nickname) override;
+	virtual void SetVisibilityButtonInteract_Implementation(UWidgetComponent* WidgetComponent, bool bVisibility) override;
+	virtual void PickUpItem_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp) override { Server_Interact(ItemPickUp, InventoryItemPickUp); };
+	virtual void TakeDamage_Implementation(float Damage, AActor* Character) override { PlayerAbilityComponent->TakeDamage(Damage, Character); };
+	virtual void HandleInteract_Implementation() override;
+	virtual void TakeMagazine_Implementation() override { Server_TakeMagazine(); };
+	
+	/** Setters and Getters */
 	virtual AActor* GetItemInHand() const { return InventoryComponent ? InventoryComponent->SelectedItemInHand : nullptr; };
 	virtual USkeletalMeshComponent* GetSkeletalMeshComponent() const { return SkeletalMeshComponent; };
 	virtual FRotator GetControlRotationSync() const { return ControlRotationSync; };
@@ -34,21 +44,16 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	void Multi_TakeMagazine_Implementation();
-	bool AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
-
-	virtual void SetNickname_Implementation(const FString& Nickname) override;
-	virtual void SetVisibilityButtonInteract_Implementation(UWidgetComponent* WidgetComponent, bool bVisibility) override;
-	virtual void HandleInteract_Implementation() override;
-	virtual void PickUpItem_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp) override;
-	virtual void TakeDamage_Implementation(float Damage, AActor* Character) override;
-
+	
+	/** Multicast RPCs */
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_Interact(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_TakeMagazine();
+
+	/** Helpers */
+	bool AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
 	
 	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Player")
 	bool bIsCrouch;

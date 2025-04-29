@@ -28,8 +28,8 @@ public:
 	virtual void StopUseItem_Implementation() override;
 	virtual void SetMagazineVariableSkeletalMeshComponent_Implementation(UStaticMeshComponent* MagMesh) override { MagMeshComponent = MagMesh; };
 	virtual bool GetIsReloading_Implementation() override { return bIsReloading; };
-	virtual UStaticMesh* GetMagStaticMesh_Implementation() const { return MagStaticMesh; };
-	virtual UStaticMeshComponent* GetMagStaticMeshComponent_Implementation() const { return MagMeshComponent; };
+	virtual UStaticMesh* GetMagazineMesh_Implementation() override { return MagStaticMesh; };
+	virtual UStaticMeshComponent* GetMagazineMeshComponent_Implementation() override { return MagMeshComponent; };
 	virtual USkeletalMeshComponent* GetWeaponSkeletalMeshComponent_Implementation() override { return SkeletalMeshComponent; };
 
 protected:
