@@ -32,13 +32,13 @@ public:
 	virtual void SetVisibilityButtonInteract_Implementation(UWidgetComponent* WidgetComponent, bool bVisibility) override;
 	virtual void PickUpItem_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp) override { Server_Interact(ItemPickUp, InventoryItemPickUp); };
 	virtual void TakeDamage_Implementation(float Damage, AActor* Character) override { PlayerAbilityComponent->TakeDamage(Damage, Character); };
-	virtual void HandleInteract_Implementation() override;
 	virtual void TakeMagazine_Implementation() override { Server_TakeMagazine(); };
-	
-	/** Setters and Getters */
-	virtual AActor* GetItemInHand() const { return InventoryComponent ? InventoryComponent->SelectedItemInHand : nullptr; };
-	virtual USkeletalMeshComponent* GetSkeletalMeshComponent() const { return SkeletalMeshComponent; };
-	virtual FRotator GetControlRotationSync() const { return ControlRotationSync; };
+	virtual AActor* GetItemInHand_Implementation() override { return InventoryComponent ? InventoryComponent->SelectedItemInHand : nullptr; };
+	virtual FRotator GetControlRotationSync_Implementation() override { return ControlRotationSync; };
+
+	/** Interfaces PlayerInput */
+	virtual void HandleInteract_Implementation() override;
+	virtual void HandleSprint_Implementation(bool bIsSprint) override { PlayerAbilityComponent->Client_Sprint(bIsSprint); };
 
 protected:
 	virtual void BeginPlay() override;

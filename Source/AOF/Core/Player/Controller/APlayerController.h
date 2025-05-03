@@ -14,24 +14,41 @@ UCLASS()
 class AOF_API AAPlayerController : public APlayerController
 {
 	GENERATED_BODY()
-	
-public:
-	AAPlayerController();
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
-	
-	void MoveForward(float Value);
-	void MoveRight(float Value);
-	void Turn(float Value);
-	void LookUp(float Value);
-	void StartJump();
-	void StopJump();
-	
+
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	UInputMappingContext* InputMappingContext;
-	
-	//UEnhancedInputSubsystemLocal* EnhancedInputSubsystem;
+
+	/** Actions */
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* MoveAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* JumpAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* LookAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* SprintAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* InteractAction;
+
+	/** Variables */
+	UPROPERTY()
+	ACharacter* ControlledCharacter;
+
+	/** Input handlers */
+	void Move(const FInputActionValue& Value);
+	void Look(const FInputActionValue& Value);
+	void StartJump();
+	void StopJump();
+	void StartSprint();
+	void StopSprint();
+	void Interact();
 };

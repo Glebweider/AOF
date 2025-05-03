@@ -33,4 +33,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
 	void TakeMagazine();
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
+	AActor* GetItemInHand();
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
+	FRotator GetControlRotationSync();
 };

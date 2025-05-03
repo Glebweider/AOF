@@ -2,78 +2,122 @@
 
 
 #include "APlayerController.h"
-
-#include "AOF/Core/Player/Character/APlayerCharacter.h"
-
-AAPlayerController::AAPlayerController()
-{
-	
-}
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "AOF/Core/Player/Interfaces/InputPlayer/InputPlayerInterface.h"
+#include "GameFramework/Character.h"
 
 void AAPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	//PlayerCharacter = Cast<AAPlayerCharacter>(GetCharacter());
+	ControlledCharacter = Cast<ACharacter>(GetPawn());
+	if (ULocalPlayer* LocalPlayer = GetLocalPlayer())
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+		{
+			if (InputMappingContext)
+			{
+				Subsystem->AddMappingContext(InputMappingContext, 0);
+			}
+		}
+	}
 }
 
 void AAPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 	
-	InputComponent->BindAxis("MoveForward", this, &AAPlayerController::MoveForward);
-	InputComponent->BindAxis("MoveRight", this, &AAPlayerController::MoveRight);
-	InputComponent->BindAxis("Turn", this, &AAPlayerController::Turn);
-	InputComponent->BindAxis("LookUp", this, &AAPlayerController::LookUp);
-
-	InputComponent->BindAction("Jump", IE_Pressed, this, &AAPlayerController::StartJump);
-	InputComponent->BindAction("Jump", IE_Released, this, &AAPlayerController::StopJump);
-}
-
-void AAPlayerController::MoveForward(float Value)
-{
-	/*if (PlayerCharacter)
+	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent))
 	{
-		PlayerCharacter->AddMovementInput(PlayerCharacter->GetActorForwardVector(), Value);
-	}*/
+		if (MoveAction)
+		{
+			EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAPlayerController::Move);
+		}
+		if (JumpAction)
+		{
+			EnhancedInput->BindAction(JumpAction, ETriggerEvent::Started, this, &AAPlayerController::StartJump);
+			EnhancedInput->BindAction(JumpAction, ETriggerEvent::Completed, this, &AAPlayerController::StopJump);
+		}
+		if (LookAction)
+		{
+			EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAPlayerController::Look);
+		}
+		if (SprintAction)
+		{
+			EnhancedInput->BindAction(SprintAction, ETriggerEvent::Triggered, this, &AAPlayerController::StartSprint);
+			EnhancedInput->BindAction(SprintAction, ETriggerEvent::Completed, this, &AAPlayerController::StopSprint);
+		}
+		if (InteractAction)
+		{
+			EnhancedInput->BindAction(InteractAction, ETriggerEvent::Started, this, &AAPlayerController::Interact);
+		}
+	}
 }
 
-void AAPlayerController::MoveRight(float Value)
+void AAPlayerController::Move(const FInputActionValue& Value)
 {
-	/*if (PlayerCharacter)
+	if (ControlledCharacter)
 	{
-		PlayerCharacter->AddMovementInput(PlayerCharacter->GetActorRightVector(), Value);
-	}*/
+		FVector2D MovementVector = Value.Get<FVector2D>();
+		FRotator YawRotation(0, GetControlRotation().Yaw, 0);
+		
+		FVector ForwardDir = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		FVector RightDir = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+		ControlledCharacter->AddMovementInput(ForwardDir, MovementVector.Y);
+		ControlledCharacter->AddMovementInput(RightDir, MovementVector.X);		
+	}
 }
+
+void AAPlayerController::Look(const FInputActionValue& Value)
+{
+	if (ControlledCharacter)
+	{
+		FVector2D LookAxis = Value.Get<FVector2D>();
+		
+		AddYawInput(LookAxis.X);
+		AddPitchInput(LookAxis.Y);		
+	}
+}
+
 
 void AAPlayerController::StartJump()
 {
-	/*if (PlayerCharacter)
+	if (ControlledCharacter)
 	{
-		PlayerCharacter->Jump();
-	}*/
+		ControlledCharacter->Jump();
+	}
 }
 
 void AAPlayerController::StopJump()
 {
-	/*if (PlayerCharacter)
+	if (ControlledCharacter)
 	{
-		PlayerCharacter->StopJumping();
-	}*/
+		ControlledCharacter->StopJumping();
+	}
 }
 
-void AAPlayerController::Turn(float Value)
+void AAPlayerController::StartSprint()
 {
-	/*if (PlayerCharacter)
+	if (ControlledCharacter)
 	{
-		PlayerCharacter->AddControllerYawInput(Value);
-	}*/
+		IInputPlayerInterface::Execute_HandleSprint(ControlledCharacter, true);
+	}
 }
 
-void AAPlayerController::LookUp(float Value)
+void AAPlayerController::StopSprint()
 {
-	/*if (PlayerCharacter)
+	if (ControlledCharacter)
 	{
-		PlayerCharacter->AddControllerPitchInput(Value);
-	}*/
+		IInputPlayerInterface::Execute_HandleSprint(ControlledCharacter, false);
+	}
+}
+
+void AAPlayerController::Interact()
+{
+	if (ControlledCharacter)
+	{
+		IInputPlayerInterface::Execute_HandleInteract(ControlledCharacter);
+	}
 }

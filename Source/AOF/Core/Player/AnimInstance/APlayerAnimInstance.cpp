@@ -3,22 +3,21 @@
 #include "KismetAnimationLibrary.h"
 #include "APlayerAnimInstance.h"
 
+#include "AOF/Core/Player/Interfaces/ToPlayer/ToPlayerInterface.h"
 #include "AOF/Core/Weapon/Interface/ToWeapon/ToWeaponInterface.h"
+#include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
-
-UAPlayerAnimInstance::UAPlayerAnimInstance()
-{
-}
 
 void UAPlayerAnimInstance::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
 
-	if (AAPlayerCharacter* PC = Cast<AAPlayerCharacter>(TryGetPawnOwner()))
+	if (ACharacter* PC = Cast<ACharacter>(TryGetPawnOwner()))
 	{
 		PlayerCharacter = PC;
-		CharacterMovement = PlayerCharacter->GetCharacterMovement();
+		SkeletalMeshCharacter = PC->GetComponentByClass<USkeletalMeshComponent>();
+		CharacterMovement = PC->GetCharacterMovement();
 	}
 }
 
@@ -54,7 +53,7 @@ void UAPlayerAnimInstance::OnNotifyTriggered(const ENotifyType Notify)
 
 void UAPlayerAnimInstance::InitializeVariables()
 {
-	ItemInHand = PlayerCharacter.Get()->GetItemInHand();
+	ItemInHand = IToPlayerInterface::Execute_GetItemInHand(PlayerCharacter.Get());
 	bIsFalling = CharacterMovement.Get()->IsFalling();
 	
 	InitSpeedDirection();
@@ -76,7 +75,7 @@ void UAPlayerAnimInstance::InitSpeedDirection()
 
 void UAPlayerAnimInstance::InitPitch()
 {
-	FRotator PlayerControlRotationSync = PlayerCharacter.Get()->GetControlRotationSync();
+	FRotator PlayerControlRotationSync = IToPlayerInterface::Execute_GetControlRotationSync(PlayerCharacter.Get());
 	AimRotator = PlayerControlRotationSync;
 
 	FRotator PlayerDeltaRotator = UKismetMathLibrary::NormalizedDeltaRotator(
@@ -105,7 +104,7 @@ void UAPlayerAnimInstance::InitPitch()
 
 void UAPlayerAnimInstance::SnapToWeaponLeftHand()
 {
-	if (ItemInHand.IsValid() && ItemInHand.Get()->Implements<UToWeaponInterface>())
+	if (ItemInHand.IsValid() && SkeletalMeshCharacter.IsValid() && ItemInHand.Get()->Implements<UToWeaponInterface>())
 	{
 		USkeletalMeshComponent* WeaponSkeletalMeshComponent = IToWeaponInterface::Execute_GetWeaponSkeletalMeshComponent(ItemInHand.Get());
 		if (WeaponSkeletalMeshComponent)
@@ -117,7 +116,7 @@ void UAPlayerAnimInstance::SnapToWeaponLeftHand()
 				FName("IK_Hand_L"),
 				RTS_World);
 			
-			PlayerCharacter.Get()->GetSkeletalMeshComponent()->TransformToBoneSpace(
+			SkeletalMeshCharacter.Get()->TransformToBoneSpace(
 				FName("hand_r"),
 				IK_Hand_L.GetLocation(),
 				IK_Hand_L.Rotator(),
@@ -164,7 +163,7 @@ void UAPlayerAnimInstance::NotifyPlaceMagazine()
 
 void UAPlayerAnimInstance::NotifyTakeMagazine()
 {
-	if (PlayerCharacter.Get())
+	if (PlayerCharacter.IsValid())
 	{
 		IToPlayerInterface::Execute_TakeMagazine(PlayerCharacter.Get());
 	}
@@ -172,10 +171,10 @@ void UAPlayerAnimInstance::NotifyTakeMagazine()
 
 void UAPlayerAnimInstance::NotifyRemoveMagazine()
 {
-	if (auto MagazineMesh = DetachMagazine(); auto PlayerCharacterMesh = PlayerCharacter.Get()->GetSkeletalMeshComponent())
+	if (auto MagazineMesh = DetachMagazine(); SkeletalMeshCharacter.IsValid())
 	{
 		MagazineMesh->AttachToComponent(
-			PlayerCharacterMesh,
+			SkeletalMeshCharacter.Get(),
 			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 			FName("skt_Mag"));
 	}

@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
-#include "AOF/Core/Player/Character/APlayerCharacter.h"
 #include "AOF/Core/Player/Notifies/ENotifyType.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "APlayerAnimInstance.generated.h"
 
 /**
@@ -17,18 +17,9 @@ class AOF_API UAPlayerAnimInstance : public UAnimInstance
 	GENERATED_BODY()
 
 public:
-	UAPlayerAnimInstance();
-
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 	virtual void OnNotifyTriggered(const ENotifyType Notify);
-
-	/** Helpers */
-	virtual UStaticMeshComponent* DetachMagazine();
-	virtual void NotifyDropMagazine();
-	virtual void NotifyPlaceMagazine();
-	virtual void NotifyTakeMagazine();
-	virtual void NotifyRemoveMagazine();
 	
 protected:
 	/** Helpers */
@@ -37,6 +28,13 @@ protected:
 	virtual void InitSpeedDirection();
 	virtual void InitPitch();
 
+	/** Notifys */
+	virtual UStaticMeshComponent* DetachMagazine();
+	virtual void NotifyDropMagazine();
+	virtual void NotifyPlaceMagazine();
+	virtual void NotifyTakeMagazine();
+	virtual void NotifyRemoveMagazine();
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Animation")
 	FRotator AimRotator;
 
@@ -69,6 +67,7 @@ protected:
 
 private:
 	TWeakObjectPtr<UCharacterMovementComponent> CharacterMovement;
-	TWeakObjectPtr<AAPlayerCharacter> PlayerCharacter;
+	TWeakObjectPtr<ACharacter> PlayerCharacter;
+	TWeakObjectPtr<USkeletalMeshComponent> SkeletalMeshCharacter;
 	TWeakObjectPtr<AActor> ItemInHand;
 };
