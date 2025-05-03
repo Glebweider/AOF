@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "PlayerAbilityComponent.generated.h"
 
 
@@ -13,36 +14,69 @@ class AOF_API UPlayerAbilityComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-	UPlayerAbilityComponent();
-
+	/** Getters and Setters */
 	float GetHealth() const { return Health; }
 	virtual void TakeDamage(float Damage, AActor* Character);
 
+	/** Client RPCs */
+	UFUNCTION(Client, Reliable)
+	void Client_PlayerDie();
+	
+	UFUNCTION(Client, Reliable)
+	void Client_Sprint(bool bIsNewSprint);
+
+	/** Server RPCs */
+	UFUNCTION(Server, Reliable)
+	void Server_PlayerDie();
+
+	UFUNCTION(Server, Reliable)
+	void Server_Sprint(bool bIsNewSprint);
+	
 protected:
 	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
-	ACharacter* Player;
+	virtual void UpdateStamina();
+	virtual void UpdateStaminaRegen();
+	
+	/** Multicast RPCs */
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_PlayerDie();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_Sprint(bool bIsNewSprint);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player")
-	APlayerController* PlayerController;
+	/** References */
+	UPROPERTY()
+	ACharacter* PlayerCharacter = nullptr;
+
+	UPROPERTY()
+	APlayerController* PlayerController = nullptr;
+
+	UPROPERTY()
+	UCharacterMovementComponent* CharacterMovement = nullptr;
 
 	UPROPERTY(EditAnywhere, Category = "UI")
 	TSubclassOf<UUserWidget> DeadScreenWidgetClass;
 
 private:
+	/** Timer Handles */
+	FTimerHandle StaminaSpendTimerHandle;
+	FTimerHandle StaminaRegenTimerHandle;
+	
+	bool bIsSprint;
+	bool bIsRegenStamina;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerAbility", meta = (AllowPrivateAccess = "true"))
 	float MaxHealth = 100.0f;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerAbility", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "PlayerAbility", meta = (AllowPrivateAccess = "true"))
 	float Health = 0.0f;
 
-	UFUNCTION(Client, Reliable)
-	void Client_PlayerDie();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerAbility", meta = (AllowPrivateAccess = "true"))
+	float MaxStamina = 100.0f;
+	
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "PlayerAbility", meta = (AllowPrivateAccess = "true"))
+	float Stamina = 0.0f;
 
-	UFUNCTION(Server, Reliable)
-	void Server_PlayerDie();
-
-	UFUNCTION(NetMulticast, Reliable)
-	void Multi_PlayerDie();
 };

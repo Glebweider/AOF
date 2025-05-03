@@ -11,32 +11,39 @@ UInventoryComponent::UInventoryComponent()
 	MaxSlots = 28;
 }
 
-void UInventoryComponent::Server_SpawnItemInHand_Implementation(const int32 ItemID)
+void UInventoryComponent::Server_SpawnItemInHand_Implementation(int32 ItemID)
 {
-	//const FInventoryItem* Item = FindItemByID(InventoryItems, ItemID)
-	if (!InventoryItems.IsEmpty())
+	ItemID = ItemID - 1;
+	if (!InventoryItems.IsEmpty() && InventoryItems.IsValidIndex(ItemID))
 	{
-		if (InventoryItems.IsValidIndex(ItemID))
+		FInventoryItem Item = InventoryItems[ItemID];
+		
+		if (SelectedItemInHand)
 		{
-			FInventoryItem Item = InventoryItems[ItemID];
-			
-			if (SelectedItemInHand)
+			if (SelectedItemInHand->GetClass() == Item.ItemClass)
 			{
-				SelectedItemInHand->Destroy();
+				return;
 			}
-
+			
+			SelectedItemInHand->Destroy();
+			SelectedItemInHand = nullptr;
+		}
+		
+		if (Item.ItemClass)
+		{
 			FActorSpawnParameters SpawnParams;
 			SpawnParams.Owner = GetOwner();
 			SpawnParams.Instigator = GetOwner()->GetInstigator();
 			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-			if (Item.ItemClass)
+			SelectedItemInHand = GetWorld()->SpawnActor<AActor>(Item.ItemClass, SpawnParams);
+			if (SelectedItemInHand)
 			{
-				SelectedItemInHand = GetWorld()->SpawnActor<AActor>(Item.ItemClass, SpawnParams);
-				if (SelectedItemInHand)
-				{
-					SelectedItemInHand->AttachToComponent(GetOwner()->FindComponentByClass<USkeletalMeshComponent>(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("skt_rifle"));
-				}
+				SelectedItemInHand->AttachToComponent(
+					GetOwner()->FindComponentByClass<USkeletalMeshComponent>(),
+					FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+					FName("skt_rifle")
+				);
 			}
 		}
 	}

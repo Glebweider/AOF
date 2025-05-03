@@ -26,6 +26,7 @@ public:
 	virtual void InteractItem_Implementation(AActor* CharacterInteract) override;
 	virtual void UseItem_Implementation() override;
 	virtual void StopUseItem_Implementation() override;
+	virtual void Reload_Implementation() override { Server_Reload(); };
 	virtual void SetMagazineVariableSkeletalMeshComponent_Implementation(UStaticMeshComponent* MagMesh) override { MagMeshComponent = MagMesh; };
 	virtual bool GetIsReloading_Implementation() override { return bIsReloading; };
 	virtual UStaticMesh* GetMagazineMesh_Implementation() override { return MagStaticMesh; };

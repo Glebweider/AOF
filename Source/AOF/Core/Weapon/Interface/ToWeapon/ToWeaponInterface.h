@@ -22,6 +22,9 @@ class AOF_API IToWeaponInterface
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
+	void Reload();
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
 	bool GetIsReloading();
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")

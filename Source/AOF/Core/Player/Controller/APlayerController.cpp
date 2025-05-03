@@ -4,7 +4,11 @@
 #include "APlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "AOF/Core/Inventory/Component/Inventory/InventoryComponent.h"
+#include "AOF/Core/Inventory/Interface/ToItemInterface.h"
 #include "AOF/Core/Player/Interfaces/InputPlayer/InputPlayerInterface.h"
+#include "AOF/Core/Player/Interfaces/ToPlayer/ToPlayerInterface.h"
+#include "AOF/Core/Weapon/Interface/ToWeapon/ToWeaponInterface.h"
 #include "GameFramework/Character.h"
 
 void AAPlayerController::BeginPlay()
@@ -30,6 +34,13 @@ void AAPlayerController::SetupInputComponent()
 	
 	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent))
 	{
+		InputComponent->BindKey(EKeys::One, IE_Pressed, this, &AAPlayerController::SelectSlot);
+		InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &AAPlayerController::SelectSlot);
+		InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &AAPlayerController::SelectSlot);
+		InputComponent->BindKey(EKeys::Four, IE_Pressed, this, &AAPlayerController::SelectSlot);
+		InputComponent->BindKey(EKeys::Five, IE_Pressed, this, &AAPlayerController::SelectSlot);
+		InputComponent->BindKey(EKeys::Six, IE_Pressed, this, &AAPlayerController::SelectSlot);
+		
 		if (MoveAction)
 		{
 			EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAPlayerController::Move);
@@ -52,6 +63,24 @@ void AAPlayerController::SetupInputComponent()
 		{
 			EnhancedInput->BindAction(InteractAction, ETriggerEvent::Started, this, &AAPlayerController::Interact);
 		}
+		if (CrouchAction)
+		{
+			EnhancedInput->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &AAPlayerController::StartCrouch);
+			EnhancedInput->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AAPlayerController::StopCrouch);
+		}
+		if (UseItemAction)
+		{
+			EnhancedInput->BindAction(UseItemAction, ETriggerEvent::Started, this, &AAPlayerController::UseItem);
+			EnhancedInput->BindAction(UseItemAction, ETriggerEvent::Completed, this, &AAPlayerController::StopUseItem);
+		}
+		if (ReloadAction)
+		{
+			EnhancedInput->BindAction(ReloadAction, ETriggerEvent::Started, this, &AAPlayerController::Reload);
+		}
+		if (InventoryAction)
+		{
+			EnhancedInput->BindAction(InventoryAction, ETriggerEvent::Started, this, &AAPlayerController::Inventory);
+		}
 	}
 }
 
@@ -72,15 +101,11 @@ void AAPlayerController::Move(const FInputActionValue& Value)
 
 void AAPlayerController::Look(const FInputActionValue& Value)
 {
-	if (ControlledCharacter)
-	{
-		FVector2D LookAxis = Value.Get<FVector2D>();
-		
-		AddYawInput(LookAxis.X);
-		AddPitchInput(LookAxis.Y);		
-	}
+	FVector2D LookAxis = Value.Get<FVector2D>();
+	
+	AddYawInput(LookAxis.X);
+	AddPitchInput(LookAxis.Y);		
 }
-
 
 void AAPlayerController::StartJump()
 {
@@ -120,4 +145,63 @@ void AAPlayerController::Interact()
 	{
 		IInputPlayerInterface::Execute_HandleInteract(ControlledCharacter);
 	}
+}
+
+void AAPlayerController::StartCrouch()
+{
+}
+
+void AAPlayerController::StopCrouch()
+{
+}
+
+void AAPlayerController::UseItem()
+{
+	if (ControlledCharacter)
+	{
+		if (auto ItemInHand = IToPlayerInterface::Execute_GetItemInHand(ControlledCharacter))
+		{
+			IToItemInterface::Execute_UseItem(ItemInHand);
+		}
+	}
+}
+
+void AAPlayerController::StopUseItem()
+{
+	if (ControlledCharacter)
+	{
+		if (auto ItemInHand = IToPlayerInterface::Execute_GetItemInHand(ControlledCharacter))
+		{
+			IToItemInterface::Execute_StopUseItem(ItemInHand);
+		}
+	}
+}
+
+void AAPlayerController::Reload()
+{
+	if (ControlledCharacter)
+	{
+		auto ItemInHand = IToPlayerInterface::Execute_GetItemInHand(ControlledCharacter);
+		if (ItemInHand && ItemInHand->Implements<UToWeaponInterface>())
+		{
+			IToWeaponInterface::Execute_Reload(ItemInHand);
+		}
+	}
+}
+
+void AAPlayerController::Inventory()
+{
+
+}
+
+void AAPlayerController::SelectSlot(FKey PressedKey)
+{
+	int32 KeyIndex = FCString::Atoi(*PressedKey.GetDisplayName().ToString());
+	if (ControlledCharacter && KeyIndex <= 5)
+	{
+		if (UInventoryComponent* Inventory = ControlledCharacter->FindComponentByClass<UInventoryComponent>())
+		{
+			Inventory->Server_SpawnItemInHand(KeyIndex);
+		}
+	}		
 }

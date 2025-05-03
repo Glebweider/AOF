@@ -39,6 +39,18 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	UInputAction* InteractAction;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* CrouchAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* UseItemAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* ReloadAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* InventoryAction;
+
 	/** Variables */
 	UPROPERTY()
 	ACharacter* ControlledCharacter;
@@ -51,4 +63,11 @@ private:
 	void StartSprint();
 	void StopSprint();
 	void Interact();
+	void StartCrouch();
+	void StopCrouch();
+	void UseItem();
+	void StopUseItem();
+	void Reload();
+	void Inventory();
+	void SelectSlot(FKey PressedKey);
 };
