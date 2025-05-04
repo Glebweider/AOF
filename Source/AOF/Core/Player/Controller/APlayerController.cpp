@@ -149,10 +149,18 @@ void AAPlayerController::Interact()
 
 void AAPlayerController::StartCrouch()
 {
+	if (ControlledCharacter)
+	{
+		IInputPlayerInterface::Execute_HandleCrouch(ControlledCharacter, true);
+	}
 }
 
 void AAPlayerController::StopCrouch()
 {
+	if (ControlledCharacter)
+	{
+		IInputPlayerInterface::Execute_HandleCrouch(ControlledCharacter, false);
+	}
 }
 
 void AAPlayerController::UseItem()

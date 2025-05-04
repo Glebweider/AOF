@@ -28,7 +28,7 @@ public:
 	void HandleInventory();
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
-	void HandleCrouch(bool bIsCrouch);
+	void HandleCrouch(bool bIsNewCrouch);
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
 	void HandleSprint(bool bIsSprint);

@@ -26,6 +26,9 @@ public:
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_TakeMagazine();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_Crouch(bool bIsNewCrouch);
 
 	/** Interfaces */
 	virtual void SetNickname_Implementation(const FString& Nickname) override;
@@ -38,6 +41,7 @@ public:
 
 	/** Interfaces PlayerInput */
 	virtual void HandleInteract_Implementation() override;
+	virtual void HandleCrouch_Implementation(bool bIsNewCrouch) override { Server_Crouch(bIsNewCrouch); };
 	virtual void HandleSprint_Implementation(bool bIsSprint) override { PlayerAbilityComponent->Client_Sprint(bIsSprint); };
 
 protected:
@@ -51,6 +55,9 @@ protected:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_TakeMagazine();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_Crouch(bool bIsNewCrouch);
 
 	/** Helpers */
 	bool AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);

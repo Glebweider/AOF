@@ -103,8 +103,6 @@ void AAPlayerCharacter::HandleInteract_Implementation()
 	}
 }
 
-//////////// PICK UP
-
 void AAPlayerCharacter::Server_Interact_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
 {
 	if (AddItemToInventory(ItemPickUp, InventoryItemPickUp))
@@ -116,6 +114,11 @@ void AAPlayerCharacter::Server_Interact_Implementation(AActor* ItemPickUp, FInve
 void AAPlayerCharacter::Server_TakeMagazine_Implementation()
 {
 	Multi_TakeMagazine();
+}
+
+void AAPlayerCharacter::Server_Crouch_Implementation(bool bIsNewCrouch)
+{
+	Multi_Crouch(bIsNewCrouch);
 }
 
 void AAPlayerCharacter::Multicast_Interact_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
@@ -149,12 +152,22 @@ void AAPlayerCharacter::Multi_TakeMagazine_Implementation()
 	}
 }
 
+void AAPlayerCharacter::Multi_Crouch_Implementation(bool bIsNewCrouch)
+{
+	bIsCrouch = bIsNewCrouch;
+	if (bIsCrouch)
+	{
+		Crouch();
+	} else
+	{
+		UnCrouch();
+	}
+}
+
 bool AAPlayerCharacter::AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
 {
 	return InventoryComponent && ItemPickUp && InventoryComponent->AddItem(InventoryItemPickUp);
 }
-
-////////////
 
 void AAPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
