@@ -61,9 +61,6 @@ protected:
 
 	/** Helpers */
 	bool AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
-	
-	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Player")
-	bool bIsCrouch;
 
 	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Player")
 	FRotator ControlRotationSync;

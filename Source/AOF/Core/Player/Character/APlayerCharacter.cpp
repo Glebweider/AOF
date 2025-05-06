@@ -56,7 +56,7 @@ void AAPlayerCharacter::SetNickname_Implementation(const FString& Nickname)
 
 void AAPlayerCharacter::SetVisibilityButtonInteract_Implementation(UWidgetComponent* WidgetComponent, const bool bVisibility)
 {
-	if (BP_PlayerController && BP_PlayerController->IsPlayerController())
+	if (BP_PlayerController && BP_PlayerController->IsPlayerController() && WidgetComponent)
 	{
 		WidgetComponent->SetVisibility(bVisibility);
 	}
@@ -154,8 +154,7 @@ void AAPlayerCharacter::Multi_TakeMagazine_Implementation()
 
 void AAPlayerCharacter::Multi_Crouch_Implementation(bool bIsNewCrouch)
 {
-	bIsCrouch = bIsNewCrouch;
-	if (bIsCrouch)
+	if (bIsNewCrouch)
 	{
 		Crouch();
 	} else
@@ -172,6 +171,5 @@ bool AAPlayerCharacter::AddItemToInventory(AActor* ItemPickUp, FInventoryItem In
 void AAPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AAPlayerCharacter, bIsCrouch);
 	DOREPLIFETIME(AAPlayerCharacter, ControlRotationSync);
 }

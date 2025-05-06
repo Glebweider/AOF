@@ -4,6 +4,7 @@
 #include "WeaponBase.h"
 
 #include "VectorUtil.h"
+#include "AOF/AOF.h"
 #include "AOF/Core/Functions/BPF_Functions.h"
 #include "AOF/Core/Player/Interfaces/ToPlayer/ToPlayerInterface.h"
 #include "Engine/AssetManager.h"
@@ -25,10 +26,10 @@ AWeaponBase::AWeaponBase()
 void AWeaponBase::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-
 	
-	if (DataTableWeapon.IsNull() || !RowName.IsValid()) return;
-	if (const auto WeaponDataRow = DataTableWeapon.DataTable->FindRow<FWeaponStruct>(RowName, TEXT("Loading Weapon Data")))
+	if (DataTableWeapon.IsNull() || !DataTableWeapon.DataTable || !RowName.IsValid()) return;
+
+	if (auto WeaponDataRow = DataTableWeapon.DataTable->FindRow<FWeaponStruct>(RowName, TEXT("Loading Weapon Data")))
 	{
 		WeaponData.Damage = WeaponDataRow->Damage;
 		WeaponData.FireSpeed = 60.0f / WeaponDataRow->FireSpeed;
@@ -86,8 +87,7 @@ void AWeaponBase::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	AActor* OwnerActor = GetOwner();
-	if (!OwnerActor) return;
+	if (!IsValid(GetOwner())) return;
 	
 	TArray<FSoftObjectPath> AssetsToLoad;
 	if (WeaponData.MagazineMesh.ToSoftObjectPath().IsValid()) { AssetsToLoad.Add(WeaponData.MagazineMesh.ToSoftObjectPath()); }
@@ -103,10 +103,8 @@ void AWeaponBase::BeginPlay()
 			MagMeshComponent = NewObject<UStaticMeshComponent>(this, UStaticMeshComponent::StaticClass(), FName("Mag"));
 			if (MagMeshComponent)
 			{
-				MagStaticMesh = WeaponData.MagazineMesh.Get();
-
 				MagMeshComponent->RegisterComponent();
-				MagMeshComponent->SetStaticMesh(MagStaticMesh);
+				MagMeshComponent->SetStaticMesh(WeaponData.MagazineMesh.Get());
 				MagMeshComponent->AttachToComponent(SkeletalMeshComponent, FAttachmentTransformRules::KeepRelativeTransform, FName("Mag"));
 			}
 		}
@@ -276,7 +274,7 @@ void AWeaponBase::SpawnProjectile(FVector& StartDirection, FVector& EndDirection
 	const bool bHitLineTrace = GetWorld()->LineTraceSingleByChannel(HitResult, StartDirection, EndDirection, ECC_Camera, CollisionParams);
 	
 	FVector Direction = UKismetMathLibrary::FindLookAtRotation(MuzzleLocation, bHitLineTrace ? HitResult.Location : HitResult.TraceEnd).Vector();
-	FVector EndLocation = MuzzleLocation + Direction * 10000;
+	FVector EndLocation = MuzzleLocation + Direction * 100000;
 	
 	for (int32 i = 0; i < WeaponData.BulletInShoot; i++)
 	{
@@ -287,7 +285,7 @@ void AWeaponBase::SpawnProjectile(FVector& StartDirection, FVector& EndDirection
 			MuzzleLocation,
 			EndLocation,
 			FQuat::Identity,
-			ECC_Camera,
+			ECC_Projectile,
 			FCollisionShape::MakeSphere(4.0f),
 			CollisionParams);
 			
@@ -297,7 +295,7 @@ void AWeaponBase::SpawnProjectile(FVector& StartDirection, FVector& EndDirection
 			
 			if (bHitSphere)
 			{
-				DrawDebugSphere(GetWorld(), SphereHit.Location, 8.f, 12, FColor::Yellow, false, 2.f);
+				DrawDebugSphere(GetWorld(), SphereHit.Location, 4.0f, 12, FColor::Yellow, false, 2.f);
 			}
 #endif
 		
@@ -392,13 +390,10 @@ void AWeaponBase::Multi_Fire_Implementation()
 		}
 		if (LoadedMuzzleSound)
 		{
-			UGameplayStatics::SpawnSoundAttached(
+			UGameplayStatics::SpawnSoundAtLocation(
+				this,
 				LoadedMuzzleSound,
-				SkeletalMeshComponent,
-				FName("Muzzle"),
-				FVector::ZeroVector,
-				EAttachLocation::SnapToTarget,
-				true
+				SkeletalMeshComponent->GetSocketLocation(FName("Muzzle"))
 			);
 		}
 		if (LoadedFireAnimation)

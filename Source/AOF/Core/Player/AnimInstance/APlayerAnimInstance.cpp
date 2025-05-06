@@ -55,6 +55,7 @@ void UAPlayerAnimInstance::InitializeVariables()
 {
 	ItemInHand = IToPlayerInterface::Execute_GetItemInHand(PlayerCharacter.Get());
 	bIsFalling = CharacterMovement.Get()->IsFalling();
+	bIsCrouch = CharacterMovement.Get()->IsCrouching();
 	
 	InitSpeedDirection();
 	InitPitch();
