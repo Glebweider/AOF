@@ -15,13 +15,19 @@ struct AOF_API FInventoryItem
 	GENERATED_BODY()
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Item")
-	FName ItemID;
+	FName ItemName;
 
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	int32 Quantity;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	float MaxDurability;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
-	bool bIsUsed;
+	float Durability;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	bool bCanBeUsed;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	TSubclassOf<AActor> ItemClass;

@@ -76,7 +76,7 @@ void AWeaponBase::OnConstruction(const FTransform& Transform)
 			});
 		}
 
-		ItemData.ItemID = WeaponData.Name;
+		ItemData.ItemName = WeaponData.Name;
 		ItemData.Quantity = 0;
 		ItemData.ItemClass = this->GetClass();
 	}

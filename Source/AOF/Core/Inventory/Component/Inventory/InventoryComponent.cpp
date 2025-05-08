@@ -8,7 +8,8 @@
 UInventoryComponent::UInventoryComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	MaxSlots = 28;
+	SetIsReplicatedByDefault(true);
+	MaxSlots = 24;
 }
 
 void UInventoryComponent::Server_SpawnItemInHand_Implementation(int32 ItemID)
@@ -29,41 +30,55 @@ void UInventoryComponent::Server_SpawnItemInHand_Implementation(int32 ItemID)
 			SelectedItemInHand = nullptr;
 		}
 		
-		if (Item.ItemClass)
+		if (Item.bCanBeUsed)
 		{
-			FActorSpawnParameters SpawnParams;
-			SpawnParams.Owner = GetOwner();
-			SpawnParams.Instigator = GetOwner()->GetInstigator();
-			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-			SelectedItemInHand = GetWorld()->SpawnActor<AActor>(Item.ItemClass, SpawnParams);
-			if (SelectedItemInHand)
+			if (Item.ItemClass)
 			{
-				SelectedItemInHand->AttachToComponent(
-					GetOwner()->FindComponentByClass<USkeletalMeshComponent>(),
-					FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-					FName("skt_rifle")
-				);
-			}
+				FActorSpawnParameters SpawnParams;
+				SpawnParams.Owner = GetOwner();
+				SpawnParams.Instigator = GetOwner()->GetInstigator();
+				SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+				SelectedItemInHand = GetWorld()->SpawnActor<AActor>(Item.ItemClass, SpawnParams);
+				if (SelectedItemInHand)
+				{
+					SelectedItemInHand->AttachToComponent(
+						GetOwner()->FindComponentByClass<USkeletalMeshComponent>(),
+						FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+						FName("skt_rifle")
+					);
+				}
+			}			
 		}
 	}
 }
 
-bool UInventoryComponent::AddItem(const FInventoryItem Item)
+bool UInventoryComponent::AddItem(FInventoryItem Item)
 {
-	if (InventoryItems.Num() <= MaxSlots)
+	if (InventoryItems.Num() > MaxSlots) return false;
+	
+	//Item.Quantity
+	InventoryItems.Add(Item);
+	if (Cast<APlayerController>(GetOwner()->GetInstigatorController())->IsLocalController())
 	{
-		InventoryItems.Add(Item);
-		return true;		
-	} else
-	{
-		return false;
+		OnInventoryChanged.Broadcast();
 	}
+	return true;
 }
 
 bool UInventoryComponent::RemoveItem(FName ItemID, int32 Quantity)
 {
+	if (Cast<APlayerController>(GetOwner()->GetInstigatorController())->IsLocalController())
+	{
+		OnInventoryChanged.Broadcast();
+	}
 	return false;
+}
+
+
+void UInventoryComponent::OnRep_InventoryItems()
+{
+	OnInventoryChanged.Broadcast();
 }
 
 void UInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
