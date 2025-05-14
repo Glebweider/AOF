@@ -3,10 +3,16 @@
 
 #include "PlayerHUD.h"
 
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "Camera/CameraComponent.h"
+#include "Components/Border.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "GameFramework/Character.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
+
 
 void UPlayerHUD::NativeConstruct()
 {
@@ -27,6 +33,13 @@ void UPlayerHUD::NativeConstruct()
 			CreateInventorySlots();
 			BindToInventory(InventoryComp);
 		}
+
+		GetWorld()->GetTimerManager().SetTimer(
+			FPSTimerHandle,
+			this,
+			&UPlayerHUD::SetRotationCompassBar,
+			0.01f,
+			true);
 	}
 }
 
@@ -71,7 +84,6 @@ void UPlayerHUD::CreateInventorySlots()
 
 void UPlayerHUD::UpdateInventory()
 {
-	UE_LOG(LogTemp, Display, TEXT("UPlayerHUD::UpdateInventory"));
 	if (HorBox_Inventory)
 	{
 		auto Items = InventoryRef->GetItems();
@@ -98,4 +110,37 @@ void UPlayerHUD::BindToInventory(UInventoryComponent* InventoryComponent)
 
 	InventoryRef = InventoryComponent;
 	InventoryRef->OnInventoryChanged.AddDynamic(this, &UPlayerHUD::UpdateInventory);
+}
+
+void UPlayerHUD::SetVisibilityInventory_Implementation(bool bIsInventoryOpen)
+{
+	if (InventoryToggleAnimation)
+	{
+		if (bIsInventoryOpen)
+		{
+			PlayAnimationForward(InventoryToggleAnimation);
+		} else
+		{
+			PlayAnimationReverse(InventoryToggleAnimation);
+		}
+	}
+}
+
+void UPlayerHUD::SetRotationCompassBar()
+{
+	if (Img_CompassBar)
+	{
+		ACharacter* Character = Cast<ACharacter>(GetOwningPlayerPawn());
+		if (Character)
+		{
+			float Yaw = Character->GetActorRotation().Yaw;
+
+			UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(Img_CompassBar);
+			if (CanvasSlot)
+			{
+				float RotationX = (Yaw * -1.0f) * 10.0f;
+				CanvasSlot->SetPosition(FVector2D(RotationX, 0.f));
+			}
+		}
+	}
 }

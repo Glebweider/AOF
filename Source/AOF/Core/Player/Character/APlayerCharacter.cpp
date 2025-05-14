@@ -5,6 +5,7 @@
 
 #include "AOF/Core/Inventory/Component/Inventory/InventoryComponent.h"
 #include "AOF/Core/Inventory/Interface/ToItemInterface.h"
+#include "AOF/Core/Player/Components/UI/PlayerUIComponent.h"
 #include "AOF/Core/Weapon/Interface/ToWeapon/ToWeaponInterface.h"
 #include "AOF/UI/Interface/ToUIInterface.h"
 #include "Camera/CameraComponent.h"
@@ -15,15 +16,44 @@
 AAPlayerCharacter::AAPlayerCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	
+	PlayerNameTagComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("PlayerNameTagWidget"));
+	if (PlayerNameTagComponent && RootComponent)
+	{
+		PlayerNameTagComponent->SetupAttachment(RootComponent);
+	}
+	
+	DetectionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("DetectionSphere"));
+	if (DetectionSphere && RootComponent)
+	{
+		DetectionSphere->SetupAttachment(RootComponent);
+		DetectionSphere->SetSphereRadius(800.f);
+
+		DetectionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		DetectionSphere->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+		DetectionSphere->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+		DetectionSphere->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+
+		DetectionSphere->OnComponentBeginOverlap.AddDynamic(this, &AAPlayerCharacter::OnBeginOverlap);
+		DetectionSphere->OnComponentEndOverlap.AddDynamic(this, &AAPlayerCharacter::OnEndOverlap);		
+	}
 }
 
 void AAPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	BP_PlayerController = Cast<APlayerController>(GetController());
+	
 	InventoryComponent = FindComponentByClass<UInventoryComponent>();
 	PlayerAbilityComponent = FindComponentByClass<UPlayerAbilityComponent>();
+	PlayerUIComponent = FindComponentByClass<UPlayerUIComponent>();
 	SkeletalMeshComponent = FindComponentByClass<USkeletalMeshComponent>();
+
+	if (PlayerUIComponent)
+	{
+		PlayerUIComponent->CreatePlayerWidget(WidgetPlayerHUD);
+	}
 }
 
 void AAPlayerCharacter::Tick(float DeltaTime)
@@ -39,22 +69,36 @@ void AAPlayerCharacter::Tick(float DeltaTime)
 	}
 }
 
+void AAPlayerCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor && OtherActor->Implements<UToPlayerInterface>())
+	{
+		IToPlayerInterface::Execute_SetVisibilityUIWidget(OtherActor, PlayerNameTagComponent, true);
+	}
+}
+
+void AAPlayerCharacter::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (OtherActor && OtherActor->Implements<UToPlayerInterface>())
+	{
+		IToPlayerInterface::Execute_SetVisibilityUIWidget(OtherActor, PlayerNameTagComponent, false);
+	}
+}
+
 void AAPlayerCharacter::SetNickname_Implementation(const FString& Nickname)
 {
-	const UWidgetComponent* WidgetComp = Cast<UWidgetComponent>(GetDefaultSubobjectByName(TEXT("PlayerNameTagWidget")));
-	if (!WidgetComp)
-	{
-		return;
-	}
+	if (!PlayerNameTagComponent) return;
 
-	UWidget* Widget = WidgetComp->GetWidget();
+	UUserWidget* Widget = PlayerNameTagComponent->GetWidget();
 	if (Widget && Widget->Implements<UToUIInterface>())
 	{
 		IToUIInterface::Execute_SetPlayerNickname(Widget, Nickname);
 	}
 }
 
-void AAPlayerCharacter::SetVisibilityButtonInteract_Implementation(UWidgetComponent* WidgetComponent, const bool bVisibility)
+void AAPlayerCharacter::SetVisibilityUIWidget_Implementation(UWidgetComponent* WidgetComponent, const bool bVisibility)
 {
 	if (BP_PlayerController && BP_PlayerController->IsPlayerController() && WidgetComponent)
 	{
@@ -103,11 +147,31 @@ void AAPlayerCharacter::HandleInteract_Implementation()
 	}
 }
 
+void AAPlayerCharacter::HandleInventory_Implementation()
+{
+	if (!bIsInventoryOpen && !CanCreateUI())
+	{
+		return;
+	}
+
+	bIsInventoryOpen = !bIsInventoryOpen;
+	if (PlayerUIComponent && WidgetPlayerHUD)
+	{
+		UUserWidget* PlayerHUDWidget = PlayerUIComponent->GetPlayerWidget(WidgetPlayerHUD);
+		if (PlayerHUDWidget)
+		{
+			IToUIInterface::Execute_SetVisibilityInventory(PlayerHUDWidget, bIsInventoryOpen);
+		}
+
+		SetUIActive(bIsInventoryOpen, bIsInventoryOpen, bIsInventoryOpen);
+	}
+}
+
 void AAPlayerCharacter::Server_Interact_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
 {
 	if (AddItemToInventory(ItemPickUp, InventoryItemPickUp))
 	{
-		Multicast_Interact(ItemPickUp, InventoryItemPickUp);
+		Multi_Interact(ItemPickUp, InventoryItemPickUp);
 	}
 }
 
@@ -121,7 +185,7 @@ void AAPlayerCharacter::Server_Crouch_Implementation(bool bIsNewCrouch)
 	Multi_Crouch(bIsNewCrouch);
 }
 
-void AAPlayerCharacter::Multicast_Interact_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
+void AAPlayerCharacter::Multi_Interact_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
 {
 	if (ItemPickUp)
 	{
@@ -166,6 +230,31 @@ void AAPlayerCharacter::Multi_Crouch_Implementation(bool bIsNewCrouch)
 bool AAPlayerCharacter::AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp)
 {
 	return InventoryComponent && ItemPickUp && InventoryComponent->AddItem(InventoryItemPickUp);
+}
+
+void AAPlayerCharacter::SetUIActive(bool bIsActive, bool bIsIgnoreMove, bool bIsIgnoreLook)
+{
+	if (BP_PlayerController && PlayerUIComponent)
+	{
+		PlayerUIComponent->bIsUIActive = bIsActive;
+		if (bIsActive)
+		{
+			BP_PlayerController->SetInputMode(FInputModeGameAndUI());
+		}
+		else
+		{
+			BP_PlayerController->SetInputMode(FInputModeGameOnly());
+		}
+		
+		BP_PlayerController->bShowMouseCursor = bIsActive;
+		BP_PlayerController->SetIgnoreMoveInput(bIsIgnoreMove);
+		BP_PlayerController->SetIgnoreLookInput(bIsIgnoreLook);
+	}
+}
+
+bool AAPlayerCharacter::CanCreateUI()
+{
+	return PlayerUIComponent && !PlayerUIComponent->bIsUIActive;
 }
 
 void AAPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

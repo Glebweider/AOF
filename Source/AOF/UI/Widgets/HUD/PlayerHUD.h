@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AOF/Core/Inventory/Component/Inventory/InventoryComponent.h"
+#include "AOF/UI/Interface/ToUIInterface.h"
 #include "AOF/UI/Widgets/InventorySlot/InventorySlotWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/HorizontalBox.h"
@@ -14,9 +15,13 @@
  * 
  */
 UCLASS()
-class AOF_API UPlayerHUD : public UUserWidget
+class AOF_API UPlayerHUD : public UUserWidget, public IToUIInterface
 {
 	GENERATED_BODY()
+
+public:
+	virtual void SetVisibilityInventory_Implementation(bool bIsInventoryOpen) override;
+	void SetRotationCompassBar();
 
 protected:
 	virtual void NativeConstruct() override;
@@ -48,5 +53,10 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	UHorizontalBox* HorBox_Inventory;
-	
+
+	UPROPERTY(meta = (BindWidgetAnim), Transient)
+	UWidgetAnimation* InventoryToggleAnimation;
+
+	UPROPERTY(meta = (BindWidget))
+	UImage* Img_CompassBar;
 };

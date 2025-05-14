@@ -199,7 +199,10 @@ void AAPlayerController::Reload()
 
 void AAPlayerController::Inventory()
 {
-
+	if (ControlledCharacter)
+	{
+		IInputPlayerInterface::Execute_HandleInventory(ControlledCharacter);
+	}
 }
 
 void AAPlayerController::SelectSlot(FKey PressedKey)

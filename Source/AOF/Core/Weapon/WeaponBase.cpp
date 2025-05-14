@@ -103,8 +103,10 @@ void AWeaponBase::BeginPlay()
 			MagMeshComponent = NewObject<UStaticMeshComponent>(this, UStaticMeshComponent::StaticClass(), FName("Mag"));
 			if (MagMeshComponent)
 			{
+				MagStaticMesh = WeaponData.MagazineMesh.Get();
+				
 				MagMeshComponent->RegisterComponent();
-				MagMeshComponent->SetStaticMesh(WeaponData.MagazineMesh.Get());
+				MagMeshComponent->SetStaticMesh(MagStaticMesh);
 				MagMeshComponent->AttachToComponent(SkeletalMeshComponent, FAttachmentTransformRules::KeepRelativeTransform, FName("Mag"));
 			}
 		}

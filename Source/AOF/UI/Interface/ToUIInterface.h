@@ -22,4 +22,7 @@ class AOF_API IToUIInterface
 public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
 	void SetPlayerNickname(const FString& Nickname);
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
+	void SetVisibilityInventory(bool bIsInventoryOpen);
 };

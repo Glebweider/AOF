@@ -26,7 +26,7 @@ public:
 	void SetNickname(const FString& Nickname);
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
-	void SetVisibilityButtonInteract(UWidgetComponent* WidgetComponent, const bool bVisibility);
+	void SetVisibilityUIWidget(UWidgetComponent* WidgetComponent, const bool bVisibility);
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
 	void PickUpItem(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);

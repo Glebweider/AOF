@@ -75,7 +75,6 @@ bool UInventoryComponent::RemoveItem(FName ItemID, int32 Quantity)
 	return false;
 }
 
-
 void UInventoryComponent::OnRep_InventoryItems()
 {
 	OnInventoryChanged.Broadcast();

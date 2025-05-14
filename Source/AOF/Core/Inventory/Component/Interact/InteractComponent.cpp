@@ -78,7 +78,7 @@ void UInteractComponent::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent
 		InteractionWidget->SetVisibility(false);
 	} else if (OtherActor && OtherActor->Implements<UToPlayerInterface>() && InteractionWidget)
 	{
-		IToPlayerInterface::Execute_SetVisibilityButtonInteract(OtherActor, InteractionWidget, true);
+		IToPlayerInterface::Execute_SetVisibilityUIWidget(OtherActor, InteractionWidget, true);
 	}
 }
 
@@ -91,6 +91,6 @@ void UInteractComponent::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, 
 		InteractionWidget->SetVisibility(false);
 	} else if (OtherActor && OtherActor->Implements<UToPlayerInterface>() && InteractionWidget)
 	{
-		IToPlayerInterface::Execute_SetVisibilityButtonInteract(OtherActor, InteractionWidget, false);
+		IToPlayerInterface::Execute_SetVisibilityUIWidget(OtherActor, InteractionWidget, false);
 	}
 }

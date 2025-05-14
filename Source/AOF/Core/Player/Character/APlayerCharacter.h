@@ -5,9 +5,11 @@
 #include "CoreMinimal.h"
 #include "AOF/Core/Inventory/Component/Inventory/InventoryComponent.h"
 #include "AOF/Core/Player/Components/Ability/PlayerAbilityComponent.h"
+#include "AOF/Core/Player/Components/UI/PlayerUIComponent.h"
 #include "AOF/Core/Player/Interfaces/InputPlayer/InputPlayerInterface.h"
 #include "AOF/Core/Player/Interfaces/ToPlayer/ToPlayerInterface.h"
 #include "AOF/Core/Weapon/Interface/Damage/DamageInterface.h"
+#include "Components/SphereComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
 #include "APlayerCharacter.generated.h"
@@ -32,7 +34,7 @@ public:
 
 	/** Interfaces */
 	virtual void SetNickname_Implementation(const FString& Nickname) override;
-	virtual void SetVisibilityButtonInteract_Implementation(UWidgetComponent* WidgetComponent, bool bVisibility) override;
+	virtual void SetVisibilityUIWidget_Implementation(UWidgetComponent* WidgetComponent, bool bVisibility) override;
 	virtual void PickUpItem_Implementation(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp) override { Server_Interact(ItemPickUp, InventoryItemPickUp); };
 	virtual void TakeDamage_Implementation(float Damage, AActor* Character) override { PlayerAbilityComponent->TakeDamage(Damage, Character); };
 	virtual void TakeMagazine_Implementation() override { Server_TakeMagazine(); };
@@ -41,6 +43,7 @@ public:
 
 	/** Interfaces PlayerInput */
 	virtual void HandleInteract_Implementation() override;
+	virtual void HandleInventory_Implementation() override;
 	virtual void HandleCrouch_Implementation(bool bIsNewCrouch) override { Server_Crouch(bIsNewCrouch); };
 	virtual void HandleSprint_Implementation(bool bIsSprint) override { PlayerAbilityComponent->Client_Sprint(bIsSprint); };
 
@@ -51,7 +54,7 @@ protected:
 	
 	/** Multicast RPCs */
 	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_Interact(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
+	void Multi_Interact(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multi_TakeMagazine();
@@ -61,6 +64,18 @@ protected:
 
 	/** Helpers */
 	bool AddItemToInventory(AActor* ItemPickUp, FInventoryItem InventoryItemPickUp);
+	void SetUIActive(bool bIsActive, bool bIsIgnoreMove, bool bIsIgnoreLook);
+	bool CanCreateUI();
+
+	/** UI */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<UUserWidget> WidgetPlayerHUD;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	UWidgetComponent* PlayerNameTagComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Collision")
+	USphereComponent* DetectionSphere;
 
 	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Player")
 	FRotator ControlRotationSync;
@@ -68,15 +83,30 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Category = "Player")
 	APlayerController* BP_PlayerController;
 
+	UPROPERTY(BlueprintReadWrite, Category = "Player")
+	APlayerState* BP_PlayerState;
+	
 	UPROPERTY()
 	USkeletalMeshComponent* SkeletalMeshComponent = nullptr;
 
-	UPROPERTY(BlueprintReadWrite, Category = "Player")
-	APlayerState* BP_PlayerState;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UInventoryComponent* InventoryComponent;
-
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UPlayerAbilityComponent* PlayerAbilityComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPlayerUIComponent* PlayerUIComponent;
+
+	UFUNCTION()
+	void OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
+						UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, 
+						bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
+					  UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+private:
+	bool bIsInventoryOpen = false;
 };
