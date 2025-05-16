@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AOF/Core/Compass/Structures/CompassMarkerStructure.h"
 #include "UObject/Interface.h"
 #include "ToUIInterface.generated.h"
 
@@ -25,4 +26,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
 	void SetVisibilityInventory(bool bIsInventoryOpen);
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interfaces")
+	void AddMarkerToPlayerCompass(ECompassMarkerType MarkerType, AActor* Actor);
 };

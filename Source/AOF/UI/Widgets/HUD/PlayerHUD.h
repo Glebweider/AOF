@@ -3,9 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AOF/Core/Compass/Structures/CompassMarkerStructure.h"
 #include "AOF/Core/Inventory/Component/Inventory/InventoryComponent.h"
 #include "AOF/UI/Interface/ToUIInterface.h"
 #include "AOF/UI/Widgets/InventorySlot/InventorySlotWidget.h"
+#include "AOF/UI/Widgets/Marker/MarkerWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/HorizontalBox.h"
 #include "Components/UniformGridPanel.h"
@@ -20,18 +22,26 @@ class AOF_API UPlayerHUD : public UUserWidget, public IToUIInterface
 	GENERATED_BODY()
 
 public:
+	virtual void AddMarkerToPlayerCompass_Implementation(ECompassMarkerType MarkerType, AActor* Actor) override;
 	virtual void SetVisibilityInventory_Implementation(bool bIsInventoryOpen) override;
-	void SetRotationCompassBar();
 
 protected:
 	virtual void NativeConstruct() override;
 	
 	virtual void FPS_Counter();
 	virtual void CreateInventorySlots();
+	virtual void SetRotationCompassBar();
+	virtual void SetRotationMarkersCompassBar();
 	virtual void BindToInventory(UInventoryComponent* InventoryComponent);
 	
 	UFUNCTION()
 	virtual void UpdateInventory();
+	
+	UPROPERTY()
+	TArray<FCompassMarkerData> CompassMarkers;
+
+	UPROPERTY()
+	ACharacter* PlayerCharacter;
 	
 	UPROPERTY()
 	UInventoryComponent* InventoryRef;
@@ -41,9 +51,18 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UMG HUD")
 	TSubclassOf<UInventorySlotWidget> SlotWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="UMG HUD")
+	TSubclassOf<UMarkerWidget> MarkerWidgetClass;
 	
-	UPROPERTY(BlueprintReadWrite, Category="UMG HUD")
+	UPROPERTY()
 	FTimerHandle FPSTimerHandle;
+	
+	UPROPERTY()
+	FTimerHandle RotationCompassBarTimerHandle;
+
+	UPROPERTY()
+	FTimerHandle RotationMarkersCompassBarTimerHandle;
 
 	UPROPERTY(meta = (BindWidget))
 	UUniformGridPanel* GridPanel_Inventory;
@@ -59,4 +78,7 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	UImage* Img_CompassBar;
+	
+	UPROPERTY(meta = (BindWidget))
+	UCanvasPanel* Canvas_CompassBar;
 };

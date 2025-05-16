@@ -3,20 +3,21 @@
 
 #include "PlayerHUD.h"
 
+#include "AOF/UI/Widgets/Marker/MarkerWidget.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
-#include "Camera/CameraComponent.h"
-#include "Components/Border.h"
+#include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "GameFramework/Character.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "Net/UnrealNetwork.h"
 
 
 void UPlayerHUD::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	PlayerCharacter = Cast<ACharacter>(GetOwningPlayerPawn());
 
 	FPS_Counter();
 	GetWorld()->GetTimerManager().SetTimer(
@@ -35,9 +36,16 @@ void UPlayerHUD::NativeConstruct()
 		}
 
 		GetWorld()->GetTimerManager().SetTimer(
-			FPSTimerHandle,
+			RotationCompassBarTimerHandle,
 			this,
 			&UPlayerHUD::SetRotationCompassBar,
+			0.01f,
+			true);
+
+		GetWorld()->GetTimerManager().SetTimer(
+			RotationMarkersCompassBarTimerHandle,
+			this,
+			&UPlayerHUD::SetRotationMarkersCompassBar,
 			0.01f,
 			true);
 	}
@@ -130,10 +138,9 @@ void UPlayerHUD::SetRotationCompassBar()
 {
 	if (Img_CompassBar)
 	{
-		ACharacter* Character = Cast<ACharacter>(GetOwningPlayerPawn());
-		if (Character)
+		if (PlayerCharacter)
 		{
-			float Yaw = Character->GetActorRotation().Yaw;
+			float Yaw = PlayerCharacter->GetActorRotation().Yaw;
 
 			UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(Img_CompassBar);
 			if (CanvasSlot)
@@ -141,6 +148,57 @@ void UPlayerHUD::SetRotationCompassBar()
 				float RotationX = (Yaw * -1.0f) * 10.0f;
 				CanvasSlot->SetPosition(FVector2D(RotationX, 0.f));
 			}
+		}
+	}
+}
+
+void UPlayerHUD::AddMarkerToPlayerCompass_Implementation(ECompassMarkerType MarkerType, AActor* Actor)
+{
+	if (Canvas_CompassBar && Actor)
+	{
+		if (auto Widget = CreateWidget<UMarkerWidget>(this, MarkerWidgetClass))
+		{
+			Widget->MarkerType = MarkerType;
+
+			if (UCanvasPanelSlot* CanvasSlot = Canvas_CompassBar->AddChildToCanvas(Widget))
+			{
+				CanvasSlot->SetSize(FVector2D(32.0f, 32.0f));
+				CanvasSlot->SetPosition(FVector2D(0.f, 0.f));			
+			}
+
+			FCompassMarkerData MarkerData;
+			MarkerData.Actor = Actor;
+			MarkerData.Widget = Widget;
+
+			CompassMarkers.Add(MarkerData);
+		}
+	}
+}
+
+void UPlayerHUD::SetRotationMarkersCompassBar()
+{
+	if (!PlayerCharacter) return;
+	
+	for (const FCompassMarkerData& MarkerData : CompassMarkers)
+	{
+		AActor* TargetActor = MarkerData.Actor;
+		UMarkerWidget* MarkerWidget = MarkerData.Widget;
+
+		if (!TargetActor || !MarkerWidget) return;
+
+		FVector CharacterLocation = PlayerCharacter->GetActorLocation();
+		FVector TargetLocation = TargetActor->GetActorLocation();
+
+		FRotator LookAtRotation = (TargetLocation - CharacterLocation).Rotation();
+		float TargetYaw = LookAtRotation.Yaw;
+		float CharacterYaw =  PlayerCharacter->GetActorRotation().Yaw;
+
+		float DeltaYaw = FMath::FindDeltaAngleDegrees(CharacterYaw, TargetYaw);
+		float CompassX = DeltaYaw * 10.0f;
+
+		if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(MarkerWidget->Slot))
+		{
+			CanvasSlot->SetPosition(FVector2D(CompassX, 0.f));
 		}
 	}
 }
